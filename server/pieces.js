@@ -466,7 +466,34 @@ class Queen extends Piece{
 		return results;
 	}
 	getVisibleSquares(square, grid){
-		return [square];
+		/*
+		var results = this.getMoves(square, grid);
+		results.push(square);
+		return results;*/
+		
+		var results = [square];
+		const color = square.piece[0];
+		const directions = [{x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}, {x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}];
+		var vector;
+		var tempX;
+		var tempY;
+		var tempPiece;
+		for (var i = 0; i < 8; i++) {
+			vector = directions[i];
+			tempX = square.x+vector.x;
+			tempY = square.y+vector.y;
+			while(grid.squareExists(tempX, tempY)){
+				tempPiece = grid.grid[tempX][tempY].piece;
+				if(tempPiece[0] == color){break;}//can't move on top of friendly piece
+				results.push(grid.grid[tempX][tempY]);
+				if(tempPiece !== ''){
+					break; //there is a piece on this square. It can't move beyond the piece.
+				}
+				tempX += vector.x;
+				tempY += vector.y;
+			}
+		}
+		return results;
 	}
 	getAttackers(square, grid, color){
 		//Assumes the square in question is either empty or contains the king, since Queens can only capture kings or move into empty spots
@@ -534,7 +561,9 @@ class King extends Piece{
 	}
 
 	getVisibleSquares(square, grid){
-		return [square];
+		var results = this.getMoves(square, grid);
+		results.push(square);
+		return results;
 	}
 
 	getAttackers(square, grid, color){

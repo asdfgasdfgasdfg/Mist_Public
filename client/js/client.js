@@ -203,7 +203,7 @@ function onclickSquare(squareEle) {
 		addOrRemovePiece(selectedSquare);
 		//send move to server
 		var moveInfo = {from: [parseInt(selectedSquare.id[0]), parseInt(selectedSquare.id[1])], to: [parseInt(squareEle.id[0]), parseInt(squareEle.id[1])]};
-		deselect()
+		deselect();
 		socket.emit('move', moveInfo);
 		/*
 		var newBoard = mockServer({desc: 'move', move: moveInfo});
@@ -260,12 +260,9 @@ function addOrRemovePiece(squareEle, piece = undefined) {
 function updateBoard(newBoardData) {
 	boardData = newBoardData;
 	var square, newSquare, tempState;
-	console.log(newBoardData);
 	for (var x = 0; x < newBoardData.length; x++) {
 		for (var y = 0; y < newBoardData[x].length; y++) {
-			console.log(x, y);
 			square = document.getElementById(x.toString()+y.toString());
-			console.log(square);
 			newSquare = newBoardData[x][y];
 			var indexOf_ = square.className.split('_', 2).join('_').length+1;
 			//update state if needed (clear/cloudy + (_X)?)

@@ -59,7 +59,7 @@ class Grid{
 			boardData.push([]);
 			for (var y = 0; y < this.grid[x].length; y++) {
 				squareColorComponent = this.grid[x][y].getColorSpecificComponent(color);
-				squareVisibility = this.grid[x][y].getColorSpecificComponent(color).visibility;
+				squareVisibility = squareColorComponent.visibility;
 				if(squareVisibility.includes('cloudy')){
 					boardData[x].push({state: squareVisibility, piece: ''});
 				}
@@ -67,7 +67,9 @@ class Grid{
 					if(this.grid[x][y].piece[1] == 'q' && squareColorComponent.observers.length == 0){
 						boardData[x].push({state: squareVisibility, piece: ''});
 					}
-					boardData[x].push({state: squareVisibility, piece: this.grid[x][y].piece});
+					else{
+						boardData[x].push({state: squareVisibility, piece: this.grid[x][y].piece});
+					}
 				}
 			}
 		}
