@@ -9,6 +9,7 @@ var noMoreMoves;
 var selectedSquare;
 var boardData;
 var moveHistory;
+var moveIndex = 0; //move index of 0 means the last recorded move. move index of 1 is just 1 move before that.
 
 //------recieving things from server------
 var socket = io();
@@ -37,15 +38,18 @@ socket.on('updateBoard', function(data){
 		noMoreMoves = true;
 		//add board to moveHistory
 		//console.log(moveHistory);
-		moveHistory.push(boardData);
+		moveHistory.unshift(boardData);
 		document.getElementById('turn').innerHTML = "Opponent's Turn";
 	}
 	else if(data.status == 'opponentMoved'){
 		//it is now your turn to move
 		noMoreMoves = false;
 		//add the opponent's move to the moveHistory, even if you might not be able to see what they moved.
-		moveHistory.push(boardData);
+		moveHistory.unshift(boardData);
 		document.getElementById('turn').innerHTML = 'Your Turn';
+	}
+	else if(data.status == 'promote'){
+		promotePawn(data.x, data.y);
 	}
 })
 
@@ -168,6 +172,29 @@ function createGamePage(data) {
 	document.body.appendChild(p);
 	//add board to moveHistory
 	moveHistory = [boardData];
+	//create backward & forward btns to look through move history
+	//back btn
+	var btn = document.createElement('a');
+	btn.className = 'roundBtn';
+	btn.innerHTML = '&#8249;'
+	btn.onclick = function(){
+		if(moveIndex < moveHistory.length-1){
+			++moveIndex;
+			updateBoard(moveHistory[moveIndex]);
+		}
+	}
+	document.body.appendChild(btn);
+	//forward btn
+	btn = document.createElement('a');
+	btn.className = 'roundBtn';
+	btn.innerHTML = '&#8250;'
+	btn.onclick = function(){
+		if(moveIndex > 0){
+			--moveIndex;
+			updateBoard(moveHistory[moveIndex]);
+		}
+	}
+	document.body.appendChild(btn);
 	//TESTING
 	//promotePawn(1, 1);
 	//-----see "additional functionality"-----
@@ -195,8 +222,8 @@ function onclickSquare(squareEle) {
 		    break;
 		}
     }
-    //clicked on a square with a "dot" on it, aka a legal move square. now perform the move.
-    if(hasDot && !noMoreMoves){ 
+    //clicked on a square with a "dot" on it, aka a legal move square. if you're allowed to move, execute the move.
+    if(hasDot && !noMoreMoves && moveIndex == 0){ 
 		//move the piece
 		addOrRemovePiece(squareEle);
 		addOrRemovePiece(squareEle, getPieceFromSquare(selectedSquare));
@@ -338,7 +365,8 @@ function promotePawn(x, y) {
 		var btn = document.createElement('div');
 		btn.id = pieceOptions[i];
 		btn.onclick = function(){
-			mockServer({desc: 'promote', piece: this.id});
+			socket.emit('promote', {piece: this.id});
+			document.getElementById('promotionDiv').remove();
 		};
 		btn.className = 'promotion-button';
 		btn.style.backgroundImage = 'url("client/imgs/pieces/wikipedia/' + pieceOptions[i] + '.png")';

@@ -24,6 +24,8 @@ console.log('server started');
 var SOCKET_LIST = {};
 //games
 var GAME_LIST = {};
+//waiting to recieve pawn promotion choices from these players
+var promotions = {};
 
 var io = require('socket.io')(serv, {});
 io.sockets.on('connection', function(socket){
@@ -42,6 +44,7 @@ io.sockets.on('connection', function(socket){
 	//disconnect
 	socket.on('disconnect', function(){
 		delete SOCKET_LIST[socket.id];
+		delete promotions[socket.id];
 		//TODO: GAME_LIST[socket.game], tell other player that their opponent has disconnected, and handle the disconnection on client side
 		delete GAME_LIST[socket.game];
 	});
@@ -69,12 +72,20 @@ io.sockets.on('connection', function(socket){
 			if( ((color == 'w' && game.turn%2 == 1) || (color == 'b' && game.turn%2 == 0)) && legalMoves.includes(to) ){
 				piecesData[from.piece[1]].move(from, to);
 				game.grid.recalibrate();
-				game.turn += 1;
-				//send new board to the player
-				socket.emit('updateBoard', {status: 'legal', board: game.grid.getBoardDataForColor(color)});
-				//send the move to the opponent
-				let enemyColor = (color == 'w') ? 'b' : 'w';
-				SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'opponentMoved', board: game.grid.getBoardDataForColor(enemyColor)});
+				//if they moved a pawn and it has reached the top of the board and needs to promote
+				if(to.piece == (color + 'p') && piecesData['p'].needsToPromote(to, game.grid)){
+					promotions[socket.id] = [to.x, to.y];
+					//update their board and ask them to choose a piece to promote to
+					socket.emit('updateBoard', {status: 'promote', board: game.grid.getBoardDataForColor(color), x: to.x, y: to.y});
+				}
+				else{
+					game.turn += 1;
+					//send new board to the player
+					socket.emit('updateBoard', {status: 'legal', board: game.grid.getBoardDataForColor(color)});
+					//send the move to the opponent
+					let enemyColor = (color == 'w') ? 'b' : 'w';
+					SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'opponentMoved', board: game.grid.getBoardDataForColor(enemyColor)});
+				}
 				legal = true;
 			}
 		}
@@ -82,6 +93,26 @@ io.sockets.on('connection', function(socket){
 		if(!legal){
 			socket.emit('updateBoard', {status: 'illegal', board: game.grid.getBoardDataForColor(color)});
 		}
+	});
+
+	socket.on('promote', function(data){
+		var game = GAME_LIST[socket.game];
+		var color = (game.players['w'] == socket.id) ? 'w' : 'b';
+
+		const choices = ['q', 'b', 'r', 'n'];
+		if(!promotions.hasOwnProperty(socket.id) || !choices.includes(data.piece[1]) || data.piece[0] !== color){
+			//trying to illegally promote
+			return;
+		}
+		//promote the piece
+		game.grid.grid[promotions[socket.id][0]][promotions[socket.id][1]].piece = data.piece;
+		//update turn
+		game.turn += 1;
+		//send updated board to player
+		socket.emit('updateBoard', {status: 'legal', board: game.grid.getBoardDataForColor(color)});
+		//send the move to the opponent
+		let enemyColor = (color == 'w') ? 'b' : 'w';
+		SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'opponentMoved', board: game.grid.getBoardDataForColor(enemyColor)});
 	});
 
 	socket.on('createRoom', function(){

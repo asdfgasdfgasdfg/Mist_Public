@@ -19,7 +19,7 @@ function getMoves(boardData, x, y = undefined) {
 }
 
 function squareExists(x, y){
-	if(x > 7 || y > 7 || x < 0 || y < 0){
+	if(x > 7 || y > 8 || x < 0 || y < 0){
 		return false;
 	}
 	else{
@@ -68,20 +68,6 @@ class ClientPawn{
 			}
 	    }
 	    return results;
-	}
-	//TODO: promoteIfAtTop()
-	promoteIfAtTop(square){
-		if(square.piece == '' || square.piece === undefined){
-			return; //invalid parameter
-		}
-		//promote if at top of the map - the weird orientation stuff is for different top of the map for black and white
-		var top = (square.piece[0] == 'w')
-			? 7 //TODO: make compatible with rectangle
-			: 0;
-	    if(square.y == top){
-	    	//TODO: promote
-	    	//ask server for the piece that the player wants to promote to, eg queen, then promote it to a queen
-	    }
 	}
 }
 

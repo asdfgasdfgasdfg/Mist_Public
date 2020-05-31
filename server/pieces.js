@@ -126,8 +126,6 @@ class Pawn extends Piece{
 			//move forward into empty square
 			if(to.piece == ''){
 				to.piece = from.piece;
-				//promote if needed
-				this.promoteIfAtTop(to);
 			}
 			//move forward and suicide into another piece
 			else{
@@ -150,8 +148,6 @@ class Pawn extends Piece{
 			//capture the piece
 			to.piece = from.piece;
 			from.piece = '';
-			//promote if needed
-			this.promoteIfAtTop(to);
 	    }
 	}
 
@@ -190,23 +186,25 @@ class Pawn extends Piece{
 			}
 	    }
 	    if(grid.squareExists(square.x+1, square.y-forward)){
-			if(grid.grid[square.x+1][square.y-forward].piece[0] == color + 'p'){
+			if(grid.grid[square.x+1][square.y-forward].piece == color + 'p'){
 			    results.push(grid.grid[square.x+1][square.y-forward]);
 			}
 	    }
 	    return results;
 	}
-	promoteIfAtTop(square, grid){
-		if(square.piece == '' || square.piece === undefined){
-			return; //invalid parameter
+	needsToPromote(square, grid){
+		if(square.piece.length != 2 || square.piece[1] != 'p'){
+			return; //square is not a pawn
 		}
 		//promote if at top of the map - the weird orientation stuff is for different top of the map for black and white
 		var top = (square.piece[0] == 'w')
-			? 7 //TODO: change to compatible with rectangle
+			? grid.height-1
 			: 0;
 	    if(square.y == top){
-	    	//TODO: promote
-	    	//ask server for the piece that the player wants to promote to, eg queen, then promote it to a queen
+	    	return true;
+	    }
+	    else{
+	    	return false;
 	    }
 	}
 }
@@ -499,8 +497,8 @@ class Queen extends Piece{
 		//Assumes the square in question is either empty or contains the king, since Queens can only capture kings or move into empty spots
 		var results = [];
 		const enemyColor = (color == 'w') ? 'b' : 'w';
-		//if this square is invisible to 'color', no 'color' Queens will be able to see or attack it.
-		if(!square.getColorSpecificComponent(color).visibility.includes('clear')){return []};
+		//(Deprecated) if this square is invisible to 'color', no 'color' Queens will be able to see or attack it.
+		//if(!square.getColorSpecificComponent(color).visibility.includes('clear')){return []};
 		
 		//[top right, top left, bottom right, bottom left, up, down, left, right]
 		const directions = [{x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}, {x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}];
@@ -606,7 +604,7 @@ class King extends Piece{
 
 		//[self, up, down, left, right, top right, top left, bottom right, bottom left]
 		const adjacentSquares = [{x: 0, y: 0}, {x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}];
-		//iterate over get adjacent squares, add them to results if it is not a friendly piece and its not guarded by enemy piece
+		//iterate over get adjacent squares, add them to results if it is guarded by an enemy piece
 		var tempSquare;
 		var tempX;
 		var tempY;
