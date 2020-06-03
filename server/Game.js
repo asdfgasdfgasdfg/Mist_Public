@@ -25,6 +25,18 @@ class Game{
 			}
 		}
 	}
+	isGameOver(){
+		var kings = this.grid.forEach(function(square){
+			if(square.piece[1] == 'k'){
+				return square;
+			}
+		});
+		for (kingSquare in kings){
+			//if king is in check && king has no moves
+			//return true
+			//else, return false
+		}
+	}
 }
 
 module.exports.Game = Game;

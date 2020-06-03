@@ -1,4 +1,4 @@
-//TODO: for invis property to work, make sure observer is added even when the square is on your side.
+//TODO: check for checks in getMoves(). make a function to do that somewhere and call it in getMoves(). also check for pinned pieces, discovered checks, etc. simulate the move first and if there is a check then dont do it? but what about the client side, they cant see all the enemies and wont know if a piece is pinned.
 var piecesData = {};
 function initPieces() {
 	new Pawn();
@@ -70,6 +70,7 @@ class Piece{
 			capturedSquare.getColorSpecificComponent(color).ghostObservers = 1;
 		}
 	}
+	//create wrapper for getMoves(), go through all the moves and make a copy of board to simulate to see if legal.
 }
 
 class Pawn extends Piece{
@@ -591,7 +592,7 @@ class King extends Piece{
 
 	onCapture(attackingSquare, capturedSquare){
 		super.onCapture(attackingSquare, capturedSquare);
-		console.log(attackingSquare.piece[0] + " wins");
+		//console.log(attackingSquare.piece[0] + " wins");
 	}
 
 	getChecks(square, grid){

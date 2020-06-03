@@ -75,6 +75,27 @@ class Grid{
 		}
 		return boardData;
 	}
+	getAllMoves(color){
+		//will return a dict of all possible moves for 'color' player in the form
+		//{'square coordinates': [coordinates of all legal moves for that square], '03': [[0, 1], [2, 0]], etc}
+		var res = {};
+		var allMoves = this.forEach(function(square, grid){
+			if(square.piece[0] == color){
+				var moves = piecesData[square.piece[1]].getMoves(square, grid);
+				for (var i = 0; i < moves.length; i++){
+					moves[i] = [moves[i].x, moves[i].y];
+				}
+				if(moves.length > 0){
+					return [[square.x, square.y], moves];
+				}
+
+			}
+		});
+		for (var i = 0; i < allMoves.length; i++){
+			res[allMoves[i][0][0].toString() + allMoves[i][0][1].toString()] = allMoves[i][1];
+		}
+		return res;
+	}
 	//gets a list of all pieces in the list that can move to this square in 1 turn. useful for checks and similar things.
 	//the list of pieces is a customisable parameter so that it will work with different sets of pieces in the future.
 	//for example, i might add options for what "faction" you wanna play with, and each one will have their own unique pieces.
@@ -133,9 +154,13 @@ class Grid{
 	//calls func for each square in the grid. if func returns something, the returned values will be returned in the list 'results'.
 	forEach(func){
 		var results = [];
+		var singleRes;
 		for (var x = this.grid.length - 1; x >= 0; x--) {
 			for (var y = this.grid[x].length - 1; y >= 0; y--) {
-				results.push(func(this.grid[x][y], this));
+				singleRes = func(this.grid[x][y], this);
+				if(singleRes !== undefined){
+					results.push(singleRes);
+				}
 			}
 		}
 		return results;

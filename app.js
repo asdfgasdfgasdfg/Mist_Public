@@ -56,9 +56,12 @@ io.sockets.on('connection', function(socket){
 	*/
 
 	socket.on('move', function(data){
+		if(!(socket.id in SOCKET_LIST) || !(socket.game in GAME_LIST)){
+			//invalid connection
+			return;
+		}
 		//TODO: 
-		//if there's a request.promotion or anything else, handle that
-		//the move will be 'request.move', and in the format of {from: [x, y], to: [x_f, y_f]}
+		//check for game.isGameOver(), if gameOver, call the gameOver function.
 		var game = GAME_LIST[socket.game];
 		var legal = false;
 
@@ -84,6 +87,7 @@ io.sockets.on('connection', function(socket){
 					socket.emit('updateBoard', {status: 'legal', board: game.grid.getBoardDataForColor(color)});
 					//send the move to the opponent
 					let enemyColor = (color == 'w') ? 'b' : 'w';
+					let moves = game.grid.getAllMoves(enemyColor);
 					SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'opponentMoved', board: game.grid.getBoardDataForColor(enemyColor)});
 				}
 				legal = true;
@@ -96,6 +100,11 @@ io.sockets.on('connection', function(socket){
 	});
 
 	socket.on('promote', function(data){
+		if(!(socket.id in SOCKET_LIST) || !(socket.game in GAME_LIST)){
+			//invalid connection
+			return;
+		}
+
 		var game = GAME_LIST[socket.game];
 		var color = (game.players['w'] == socket.id) ? 'w' : 'b';
 
@@ -116,6 +125,11 @@ io.sockets.on('connection', function(socket){
 	});
 
 	socket.on('createRoom', function(){
+		if(!(socket.id in SOCKET_LIST)){
+			//invalid connection
+			return;
+		}
+
 		//error handling not fully implemented yet
 		let error = false;
 
@@ -148,6 +162,10 @@ io.sockets.on('connection', function(socket){
 	});
 
 	socket.on('joinRoom', function(data){
+		if(!(socket.id in SOCKET_LIST)){
+			//invalid connection
+			return;
+		}
 		let error =  (data.code === undefined || GAME_LIST[data.code] === undefined || !( (GAME_LIST[data.code].players['w'] == 'waiting' || GAME_LIST[data.code].players['b'] == 'waiting') && (GAME_LIST[data.code].players['w'] != GAME_LIST[data.code].players['b'])) || data.code == socket.game) ? true : false;
 		if(error){
 			socket.emit('joinRoom', {error: 'Invalid code. Are you sure you typed it in correctly?'});
@@ -175,3 +193,13 @@ io.sockets.on('connection', function(socket){
 
 	});
 });
+
+function gameOver(winnerId, loserId) {
+	var winner = SOCKET_LIST[winnerId];
+	var loser = SOCKET_LIST[loserId];
+	delete GAME_LIST[winner.game];
+	winner.game = 'N/A';
+	loser.game = 'N/A';
+	winner.emit('gameOver', {status: 'You won!'});
+	loser.emit('lose', {status: 'You lost!'});
+}

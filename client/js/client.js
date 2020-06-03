@@ -2,7 +2,7 @@ const options = {
 	width: 500,
 	legalMarksColor: 'cornflowerblue',
 }
-
+//TODO: change clientgetmoves
 createMenuPage();
 var color;
 var noMoreMoves;
@@ -10,6 +10,7 @@ var selectedSquare;
 var boardData;
 var moveHistory;
 var moveIndex = 0; //move index of 0 means the last recorded move. move index of 1 is just 1 move before that.
+var legalMoves = {};
 
 //------recieving things from server------
 var socket = io();
@@ -42,6 +43,8 @@ socket.on('updateBoard', function(data){
 		document.getElementById('turn').innerHTML = "Opponent's Turn";
 	}
 	else if(data.status == 'opponentMoved'){
+		//get legal moves from server
+		legalMoves = data.moves;
 		//it is now your turn to move
 		noMoreMoves = false;
 		//add the opponent's move to the moveHistory, even if you might not be able to see what they moved.
@@ -222,6 +225,10 @@ function onclickSquare(squareEle) {
 		    break;
 		}
     }
+    if(noMoreMoves || moveIndex != 0){
+    	deselect();
+    	return;
+    }
     //clicked on a square with a "dot" on it, aka a legal move square. if you're allowed to move, execute the move.
     if(hasDot && !noMoreMoves && moveIndex == 0){ 
 		//move the piece
@@ -376,6 +383,18 @@ function promotePawn(x, y) {
 	//deselect(selectedSquare);
 	//mockServer({desc: 'promote', piece: })
 }
+/*
+function getMoves(x, y = undefined){
+	if(y !== undefined){
+		x = x.toString() + y.toString();
+	}
+	if(x in legalMoves){
+		return legalMoves[x];
+	}
+	else{
+		return [];
+	}
+}*/
 
 //Used to access client.js's global variables from other scripts. Used by clientAddons.js
 function getClientVariables() {
