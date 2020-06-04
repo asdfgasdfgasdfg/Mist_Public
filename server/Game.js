@@ -1,4 +1,5 @@
 var Grid = require('./Grid.js');
+var piecesData = require('./pieces.js').PIECES_LIST;
 
 class Game{
 	constructor(takenCodes){
@@ -25,17 +26,27 @@ class Game{
 			}
 		}
 	}
-	isGameOver(){
-		var kings = this.grid.forEach(function(square){
-			if(square.piece[1] == 'k'){
-				return square;
+	getStatus(color){
+		//it is assumed that 'color' has just made a move. since you cannot checkmate yourself, we will only check if enemyColor has been checkmated.
+		//if not game over, return false. if game ended by checkmate, return 'checkmate'. if game ended in draw, return 'tie'
+		var enemyColor = (color == 'w') ? 'b' : 'w';
+		console.log(this.grid.getAllMoves(enemyColor), color, enemyColor);
+		if(Object.keys(this.grid.getAllMoves(enemyColor)).length == 0){
+			var checkmate = this.grid.forEach(function(square){
+				if(square.piece == enemyColor+'k' && square.getColorSpecificComponent(enemyColor).visibility.includes('_X')){
+					return true;
+				}
+			});
+			//'color' won by checkmate
+			if(checkmate.length == 1 && checkmate[0]){
+				return 'checkmate';
 			}
-		});
-		for (kingSquare in kings){
-			//if king is in check && king has no moves
-			//return true
-			//else, return false
+			//game ended in draw
+			else{
+				return 'tie';
+			}
 		}
+		return 'playing';
 	}
 }
 

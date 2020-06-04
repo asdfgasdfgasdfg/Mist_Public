@@ -46,7 +46,7 @@ class Grid{
 			//---queens / black widows---
 			this.grid[3][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'q';
 			//---kings---
-			this.grid[4][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'k';
+			this.grid[4][wb[c].yCoor(3, this.height)].piece = wb[c].color + 'k';
 		}
 
 	}
@@ -79,8 +79,10 @@ class Grid{
 		//will return a dict of all possible moves for 'color' player in the form
 		//{'square coordinates': [coordinates of all legal moves for that square], '03': [[0, 1], [2, 0]], etc}
 		var res = {};
+		var gridCopy = this.createCopy();
+
 		var allMoves = this.forEach(function(square, grid){
-			if(square.piece[0] == color){
+			if(square.piece.length == 2 && square.piece[0] == color){
 				var moves = piecesData[square.piece[1]].getMoves(square, grid);
 				for (var i = 0; i < moves.length; i++){
 					moves[i] = [moves[i].x, moves[i].y];
@@ -91,8 +93,39 @@ class Grid{
 
 			}
 		});
+		var piecesList = [];
+		for (var key in piecesData){
+			piecesList.push(piecesData[key]);
+		}
+		var enemyColor = (color == 'w') ? 'b' : 'w';
 		for (var i = 0; i < allMoves.length; i++){
 			res[allMoves[i][0][0].toString() + allMoves[i][0][1].toString()] = allMoves[i][1];
+			var movesList = res[allMoves[i][0][0].toString() + allMoves[i][0][1].toString()];
+			var from = gridCopy.grid[allMoves[i][0][0]][allMoves[i][0][1]];
+			for (var x = movesList.length-1; x >= 0; x--) {
+				piecesData[from.piece[1]].move(from, gridCopy.grid[movesList[x][0]][movesList[x][1]]);
+				let inCheck = gridCopy.forEach(function(square){
+					//loop through grid, find the square with your king, check if the king is being attacked. if it is, then this is an invalid move.
+					if(square.piece == color + 'k'){
+						if(gridCopy.getAttackers(square, piecesList, enemyColor).length > 0){
+							return true;
+						}
+						else{
+							return false;
+						}
+					}
+				});
+				if(inCheck[0]){
+					movesList.splice(x, 1);
+				}
+				gridCopy = this.createCopy();
+				from = gridCopy.grid[allMoves[i][0][0]][allMoves[i][0][1]];
+			}
+		}
+		for (var key in res) {
+			if(res[key].length == 0){
+				delete res[key];
+			}
 		}
 		return res;
 	}
@@ -142,12 +175,19 @@ class Grid{
 			square.recalibrateVisibility();
 		});
 		//add red X's for the kings and their checks
+		var piecesList = [];
+		for (var key in piecesData){
+			piecesList.push(piecesData[key]);
+		}
 		this.forEach(function(square, grid) {
 			if(square.piece[1] == 'k'){
-				var checks = piecesData['k'].getChecks(square, grid);
+				if(grid.getAttackers(square, piecesList, ((square.piece[0] == 'w') ? 'b' : 'w') ).length > 0){
+					square.getColorSpecificComponent(square.piece[0]).visibility += '_X';
+				}
+				/*var checks = piecesData['k'].getChecks(square, grid);
 				for (var i = 0; i < checks.length; ++i) {
 					checks[i].getColorSpecificComponent(square.piece[0]).visibility += '_X';
-				}
+				}*/
 			}
 		});
 	}
@@ -164,6 +204,15 @@ class Grid{
 			}
 		}
 		return results;
+	}
+	createCopy(){
+		var copy = new Grid(this.width, this.height);
+		for(var x = 0; x < this.grid.length; x++){
+			for (var y = 0; y < this.grid[x].length; y++) {
+				copy.grid[x][y].piece = this.grid[x][y].piece;
+			}
+		}
+		return copy;
 	}
 }
 

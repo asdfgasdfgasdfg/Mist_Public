@@ -38,7 +38,6 @@ socket.on('updateBoard', function(data){
 	else if(data.status == 'legal'){
 		noMoreMoves = true;
 		//add board to moveHistory
-		//console.log(moveHistory);
 		moveHistory.unshift(boardData);
 		document.getElementById('turn').innerHTML = "Opponent's Turn";
 	}
@@ -54,6 +53,22 @@ socket.on('updateBoard', function(data){
 	else if(data.status == 'promote'){
 		promotePawn(data.x, data.y);
 	}
+	else if(data.status == 'win' || data.status == 'lose' || data.status == 'tie'){
+		//dont allow them to continue making moves
+		noMoreMoves = true;
+		//add board to moveHistory
+		moveHistory.unshift(boardData);
+		if(data.status == 'win'){
+			alert('You won!');
+		}
+		else if(data.status == 'lose'){
+			alert('You lost!');
+		}
+		else if(data.status == 'tie'){
+			alert('Draw');
+		}
+	}
+	
 })
 
 
@@ -120,6 +135,9 @@ function createGamePage(data) {
 	//-----default function begins-----
 	boardData = data.board;
 	color = data.color;
+	if(color == 'w'){
+		legalMoves = data.moves;
+	}
 	if((data.turn % 2 == 1 && color == 'w') || data.turn % 2 == 0 && color == 'b'){
 		//your turn to move
 		noMoreMoves = false;
@@ -225,10 +243,6 @@ function onclickSquare(squareEle) {
 		    break;
 		}
     }
-    if(noMoreMoves || moveIndex != 0){
-    	deselect();
-    	return;
-    }
     //clicked on a square with a "dot" on it, aka a legal move square. if you're allowed to move, execute the move.
     if(hasDot && !noMoreMoves && moveIndex == 0){ 
 		//move the piece
@@ -239,22 +253,6 @@ function onclickSquare(squareEle) {
 		var moveInfo = {from: [parseInt(selectedSquare.id[0]), parseInt(selectedSquare.id[1])], to: [parseInt(squareEle.id[0]), parseInt(squareEle.id[1])]};
 		deselect();
 		socket.emit('move', moveInfo);
-		/*
-		var newBoard = mockServer({desc: 'move', move: moveInfo});
-		//redraw the board according to info recieved
-		//if the move was illegal
-		if(newBoard.status == 'illegal'){
-			//return board to legal state, then allow player to try again
-			updateBoard(newBoard.board);
-			noMoreMoves = false;
-		}
-		else if(newBoard.status == 'legal'){
-			//update board to new state
-			updateBoard(newBoard.board);
-			//add board to moveHistory
-			console.log(moveHistory);
-			moveHistory.push(boardData);
-		}*/
     }
     else if(squareEle === selectedSquare){ //clicked on the selected square, so deselect it
     	selectedSquare = undefined;
@@ -346,9 +344,21 @@ function select(squareEle) {
 	highlight.className = 'square_selected';
 	squareEle.appendChild(highlight);
 	//draw legal move dots
-	var legalMoves = getMoves(boardData, squareEle.id);
+	var tempLegalMoves;
+	if(!noMoreMoves && moveIndex == 0){
+		if(squareEle.id in legalMoves){
+			tempLegalMoves = legalMoves[squareEle.id];
+		}
+		else{
+			tempLegalMoves = [];
+		}
+	}
+	else{
+		tempLegalMoves = getMoves(boardData, squareEle.id);
+	}
+	//var legalMoves = getMoves(boardData, squareEle.id);
 	var width = options.width / Math.sqrt(document.getElementById('board').childElementCount);
-	for (var i = 0; i < legalMoves.length; i++) {
+	for (var i = 0; i < tempLegalMoves.length; i++) {
 	    var canvas = document.createElement("canvas");
 	    canvas.setAttribute("height", width + "px");
 	    canvas.setAttribute("width", width + "px");
@@ -358,7 +368,7 @@ function select(squareEle) {
 	    ctx.arc(width / 2, width / 2, width / 10, 0, 2 * Math.PI);
 	    ctx.fillStyle = options.legalMarksColor;
 	    ctx.fill();
-	    document.getElementById(legalMoves[i]).appendChild(canvas);
+	    document.getElementById(tempLegalMoves[i][0].toString() + tempLegalMoves[i][1].toString()).appendChild(canvas);
 	}
 }
 

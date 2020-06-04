@@ -3,7 +3,7 @@
 //require('for/other/directories/someFile.js')
 //to access the variables in other files, use 'export', or just remove the 'var' - but this is not reccomended
 
-//TODO: dont allow you to join your own game stupid
+//TODO: something wrong with ending the game by checkmate, havent tested tie yet
 var express = require('express');
 var app = express();
 var serv = require('http').Server(app);
@@ -82,13 +82,35 @@ io.sockets.on('connection', function(socket){
 					socket.emit('updateBoard', {status: 'promote', board: game.grid.getBoardDataForColor(color), x: to.x, y: to.y});
 				}
 				else{
+					var enemyColor = (color == 'w') ? 'b' : 'w';
 					game.turn += 1;
-					//send new board to the player
-					socket.emit('updateBoard', {status: 'legal', board: game.grid.getBoardDataForColor(color)});
-					//send the move to the opponent
-					let enemyColor = (color == 'w') ? 'b' : 'w';
-					let moves = game.grid.getAllMoves(enemyColor);
-					SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'opponentMoved', board: game.grid.getBoardDataForColor(enemyColor)});
+					//check for gameover
+					let gameStatus = game.getStatus(color);
+					console.log(gameStatus);
+					let statusToSend = {'w': '', 'b': ''};
+
+					if(gameStatus == 'playing'){
+						//send new board to the player
+						socket.emit('updateBoard', {status: 'legal', board: game.grid.getBoardDataForColor(color)});
+						//send the move to the opponent
+						let moves = game.grid.getAllMoves(enemyColor);
+						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'opponentMoved', board: game.grid.getBoardDataForColor(enemyColor), moves: moves});
+					}
+					//TODO: if gameover, make everything visible and send the whole board over.
+					//		then delete the game, and on the client side, allow players option to play again or go back to menu screen
+					else if(gameStatus == 'checkmate'){
+						//send new board to winner
+						socket.emit('updateBoard', {status: 'win', board: game.grid.getBoardDataForColor(color)});
+						//send new board to loser
+						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'lose', board: game.grid.getBoardDataForColor(enemyColor)});
+					}
+					else if(gameStatus == 'tie'){
+						//send new board to winner
+						socket.emit('updateBoard', {status: 'tie', board: game.grid.getBoardDataForColor(color)});
+						//send new board to loser
+						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'tie', board: game.grid.getBoardDataForColor(enemyColor)});
+					}
+					
 				}
 				legal = true;
 			}
@@ -181,14 +203,20 @@ io.sockets.on('connection', function(socket){
 				game.players['b'] = socket.id;
 			}
 			//send game data to both players and tell them to join the room on the client side
-			for (var color in game.players) {
-				SOCKET_LIST[game.players[color]].emit('joinRoom', {
-					code: game.code,
-					board: game.grid.getBoardDataForColor(color),
-					turn: game.turn,
-					color: color
-				});
-			}
+			SOCKET_LIST[game.players['w']].emit('joinRoom', {
+				code: game.code,
+				board: game.grid.getBoardDataForColor('w'),
+				turn: game.turn,
+				color: 'w',
+				moves: game.grid.getAllMoves('w')
+			});
+
+			SOCKET_LIST[game.players['b']].emit('joinRoom', {
+				code: game.code,
+				board: game.grid.getBoardDataForColor('b'),
+				turn: game.turn,
+				color: 'b'
+			});
 		}
 
 	});

@@ -92,7 +92,7 @@ class Pawn extends Piece{
 	    if(grid.squareExists(square.x, square.y+team.forward)){
 			results.push(grid.grid[square.x][square.y+team.forward]);
 			//move forward twice if pawn is in its starting square and there's nothing in its way
-			const isInStartingPos = ((square.y == 1 && team.color == 'w') || (square.y == 7 && team.color == 'b')) && square.x > 0 && square.x < 7;
+			const isInStartingPos = ((square.y == 1 && team.color == 'w') || (square.y == grid.height-2 && team.color == 'b')) && square.x > 0 && square.x < grid.width - 1;
 			if(grid.squareExists(square.x, square.y+2*team.forward)){
 				if(grid.grid[square.x][square.y+team.forward].piece == '' && isInStartingPos){
 					results.push(grid.grid[square.x][square.y+2*team.forward]);

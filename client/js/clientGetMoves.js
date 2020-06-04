@@ -48,9 +48,9 @@ class ClientPawn{
 	    if(squareExists(x, y+team.forward)){
 			results.push([x, y+team.forward]);
 			//move forward twice if pawn is in its starting square and there's nothing in its way
-			const isInStartingPos = ((y == 1 && team.color == 'w') || (y == 7 && team.color == 'b')) && x > 0 && x < 7;
+			const isInStartingPos = ((y == 1 && team.color == 'w') || (y == boardData[0].length-2 && team.color == 'b')) && x > 0 && x < boardData.length-1;
 			if(squareExists(x, y+2*team.forward)){
-				if(boardData[x][y+team.forward].piece == '' && isInStartingPos){
+				if(isInStartingPos){
 					results.push([x, y+2*team.forward]);
 				}
 			}
@@ -58,14 +58,10 @@ class ClientPawn{
 
 	    //attack squares
 	    if(squareExists(x+1, y+team.forward)){
-			if(boardData[x+1][y+team.forward].piece[0] == team.enemy){
-				results.push([x+1, y+team.forward]);
-			}
+			results.push([x+1, y+team.forward]);
 	    }
 	    if(squareExists(x-1, y+team.forward)){
-			if(boardData[x-1][y+team.forward].piece[0] == team.enemy){
-			    results.push([x-1, y+team.forward]);
-			}
+			results.push([x-1, y+team.forward]);
 	    }
 	    return results;
 	}
@@ -89,11 +85,7 @@ class ClientBishop{
 			var tempX = x+vector.x;
 			var tempY = y+vector.y;
 			while(squareExists(tempX, tempY)){
-				if(boardData[tempX][tempY].piece[0] == color){break;}//can't move on top of friendly piece
 				results.push([tempX, tempY]);
-				if(boardData[tempX][tempY].piece != ''){
-					break; //there is a piece on this square. It can't move beyond the piece.
-				}
 				tempX += vector.x;
 				tempY += vector.y;
 			}
@@ -120,11 +112,7 @@ class ClientRook{
 			var tempX = x+vector.x;
 			var tempY = y+vector.y;
 			while(squareExists(tempX, tempY)){
-				if(boardData[tempX][tempY].piece[0] == color){break;}//can't move on top of friendly piece
 				results.push([tempX, tempY]);
-				if(boardData[tempX][tempY].piece != ''){
-					break; //there is a piece on this square. It can't move beyond the piece.
-				}
 				tempX += vector.x;
 				tempY += vector.y;
 			}
@@ -155,17 +143,13 @@ class ClientKnight{
 			tempY = y + moves[i].y;
 			if(squareExists(tempX, tempY)){
 				tempSquare = boardData[tempX][tempY];
-				if(tempSquare.piece === '' || tempSquare.piece[0] == enemyColor){
-					results.push([tempX, tempY]);
-				}
+				results.push([tempX, tempY]);
 			}
 		}
 		//---jumps (any enemy piece on the same row)---
 		for (var i = 0; i < boardData.length; i++) {
 			tempSquare = boardData[i][y];
-			if(tempSquare.piece[0] == enemyColor){
-				results.push([i, y]);
-			}
+			results.push([i, y]);
 		}
 		return results;
 	}
@@ -189,14 +173,7 @@ class ClientQueen{
 			var tempX = x+vector.x;
 			var tempY = y+vector.y;
 			while(squareExists(tempX, tempY)){
-				var tempSquare = boardData[tempX][tempY];
-				if(tempSquare.piece[0] == color){break;}//can't move on top of friendly piece
-				if(tempSquare.state.includes('clear') && (tempSquare.piece === '' || tempSquare.piece == enemyColor+'k')){//if it is visible, and is either empty or the enemy king, it's a legal move
-					results.push([tempX, tempY]);
-				}
-				if(tempSquare.piece !== ''){
-					break; //there is a piece on this square. It can't move beyond the piece.
-				}
+				results.push([tempX, tempY]);
 				tempX += vector.x;
 				tempY += vector.y;
 			}
@@ -227,9 +204,7 @@ class ClientKing{
 			//is legal move if it's on the map and not a friendly piece and it's unguarded/unchecked by the enemy
 			if(squareExists(tempX, tempY)){
 				tempSquare = boardData[tempX][tempY];
-				if(tempSquare.piece[0] != square.piece[0] && !tempSquare.state.includes("_X")){
-					results.push([tempX, tempY]);
-				}
+				results.push([tempX, tempY]);
 			}
 		}
 		return results;
