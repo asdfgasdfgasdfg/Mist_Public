@@ -46,7 +46,7 @@ class Grid{
 			//---queens / black widows---
 			this.grid[3][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'q';
 			//---kings---
-			this.grid[4][wb[c].yCoor(3, this.height)].piece = wb[c].color + 'k';
+			this.grid[4][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'k';
 		}
 
 	}
@@ -55,24 +55,29 @@ class Grid{
 		var boardData = [];
 		var squareColorComponent;
 		var squareVisibility;
-		for (var x = 0; x < this.grid.length; x++) {
-			boardData.push([]);
-			for (var y = 0; y < this.grid[x].length; y++) {
-				squareColorComponent = this.grid[x][y].getColorSpecificComponent(color);
-				squareVisibility = squareColorComponent.visibility;
-				if(squareVisibility.includes('cloudy')){
-					boardData[x].push({state: squareVisibility, piece: ''});
-				}
-				else if(squareVisibility.includes('clear')){
-					if(this.grid[x][y].piece[1] == 'q' && squareColorComponent.observers.length == 0){
-						boardData[x].push({state: squareVisibility, piece: ''});
+			for (var x = 0; x < this.grid.length; x++) {
+				boardData.push([]);
+				for (var y = 0; y < this.grid[x].length; y++) {
+					if(color == 'w' || color == 'b'){
+						squareColorComponent = this.grid[x][y].getColorSpecificComponent(color);
+						squareVisibility = squareColorComponent.visibility;
+						if(squareVisibility.includes('cloudy')){
+							boardData[x].push({state: squareVisibility, piece: ''});
+						}
+						else if(squareVisibility.includes('clear')){
+							if(this.grid[x][y].piece[1] == 'q' && squareColorComponent.observers.length == 0){
+								boardData[x].push({state: squareVisibility, piece: ''});
+							}
+							else{
+								boardData[x].push({state: squareVisibility, piece: this.grid[x][y].piece});
+							}
+						}
 					}
-					else{
-						boardData[x].push({state: squareVisibility, piece: this.grid[x][y].piece});
+					else if(color == 'all'){
+						boardData[x].push({state: 'clear', piece: this.grid[x][y].piece});
 					}
 				}
 			}
-		}
 		return boardData;
 	}
 	getAllMoves(color){

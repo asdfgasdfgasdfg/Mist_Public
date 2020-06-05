@@ -15,6 +15,9 @@ var piecesData = require('./server/pieces.js').PIECES_LIST;
 app.get('/', function(req, res) {
 	res.sendFile(__dirname + '/client/index.html');
 });
+app.get('/favicon.ico', function(req, res){
+    res.sendFile(__dirname + '/client/favicon.ico');
+});
 app.use('/client', express.static(__dirname + '/client'));
 
 serv.listen(2000);
@@ -69,6 +72,7 @@ io.sockets.on('connection', function(socket){
 		if(game.grid.squareExists(data.from[0], data.from[1]) && game.grid.squareExists(data.to[0], data.to[1])){
 			let from = game.grid.grid[data.from[0]][data.from[1]];
 			let to = game.grid.grid[data.to[0]][data.to[1]];
+			let didCapture = (to.piece == '') ? false : true;
 			let legalMoves = piecesData[from.piece[1]].getMoves(from, game.grid);
 
 			//if it's the player's turn to move, and the move is legal, then move piece and send new board
@@ -86,7 +90,6 @@ io.sockets.on('connection', function(socket){
 					game.turn += 1;
 					//check for gameover
 					let gameStatus = game.getStatus(color);
-					console.log(gameStatus);
 					let statusToSend = {'w': '', 'b': ''};
 
 					if(gameStatus == 'playing'){
@@ -94,21 +97,20 @@ io.sockets.on('connection', function(socket){
 						socket.emit('updateBoard', {status: 'legal', board: game.grid.getBoardDataForColor(color)});
 						//send the move to the opponent
 						let moves = game.grid.getAllMoves(enemyColor);
-						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'opponentMoved', board: game.grid.getBoardDataForColor(enemyColor), moves: moves});
+						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'opponentMoved', board: game.grid.getBoardDataForColor(enemyColor), moves: moves, didCapture: didCapture});
 					}
-					//TODO: if gameover, make everything visible and send the whole board over.
-					//		then delete the game, and on the client side, allow players option to play again or go back to menu screen
+					//TODO: delete the game, and on the client side, allow players option to play again or go back to menu screen
 					else if(gameStatus == 'checkmate'){
 						//send new board to winner
-						socket.emit('updateBoard', {status: 'win', board: game.grid.getBoardDataForColor(color)});
+						socket.emit('updateBoard', {status: 'win', board: game.grid.getBoardDataForColor('all')});
 						//send new board to loser
-						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'lose', board: game.grid.getBoardDataForColor(enemyColor)});
+						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'lose', board: game.grid.getBoardDataForColor('all'), didCapture: didCapture});
 					}
 					else if(gameStatus == 'tie'){
 						//send new board to winner
-						socket.emit('updateBoard', {status: 'tie', board: game.grid.getBoardDataForColor(color)});
+						socket.emit('updateBoard', {status: 'tie', board: game.grid.getBoardDataForColor('all')});
 						//send new board to loser
-						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'tie', board: game.grid.getBoardDataForColor(enemyColor)});
+						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'tie', board: game.grid.getBoardDataForColor('all'), didCapture: didCapture});
 					}
 					
 				}
@@ -150,6 +152,11 @@ io.sockets.on('connection', function(socket){
 		if(!(socket.id in SOCKET_LIST)){
 			//invalid connection
 			return;
+		}
+		//if socket already created a game, delete that game so you can replace it w/ a new one
+		if(socket.game != 'N/A'){
+			delete GAME_LIST[socket.game];
+			socket.game = 'N/A';
 		}
 
 		//error handling not fully implemented yet

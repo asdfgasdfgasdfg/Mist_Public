@@ -2,8 +2,7 @@ const options = {
 	width: 500,
 	legalMarksColor: 'cornflowerblue',
 }
-//TODO: change clientgetmoves
-createMenuPage();
+
 var color;
 var noMoreMoves;
 var selectedSquare;
@@ -11,6 +10,18 @@ var boardData;
 var moveHistory;
 var moveIndex = 0; //move index of 0 means the last recorded move. move index of 1 is just 1 move before that.
 var legalMoves = {};
+
+var sfx = {
+	move: new Audio("client/sfx/Move.mp3"),
+	//select: new Audio("client/sfx/move.mp3"),
+	capture: new Audio("client/sfx/Capture.mp3"),
+	//check: new Audio("client/sfx/check.mp3"),
+	startGame: new Audio("client/sfx/GenericNotify.mp3"),
+	win: new Audio("client/sfx/Victory.mp3"),
+	lose: new Audio("client/sfx/Defeat.mp3"),
+	draw: new Audio("client/sfx/Draw.mp3")
+};
+createMenuPage();
 
 //------recieving things from server------
 var socket = io();
@@ -29,6 +40,14 @@ socket.on('joinRoom', createGamePage);
 socket.on('updateBoard', function(data){
 	//update the board according to data sent from server
 	updateBoard(data.board);
+	if(data.hasOwnProperty('didCapture')){
+		if(data.didCapture){
+			sfx.capture.play();
+		}
+		else{
+			sfx.move.play();
+		}
+	}
 
 	if(data.status == 'illegal'){
 			//allow player to try again
@@ -59,12 +78,18 @@ socket.on('updateBoard', function(data){
 		//add board to moveHistory
 		moveHistory.unshift(boardData);
 		if(data.status == 'win'){
+			//play win sound
+			sfx.win.play();
 			alert('You won!');
 		}
 		else if(data.status == 'lose'){
+			//play lose sound
+			sfx.lose.play();
 			alert('You lost!');
 		}
 		else if(data.status == 'tie'){
+			//play draw sound
+			sfx.draw.play();
 			alert('Draw');
 		}
 	}
@@ -191,6 +216,8 @@ function createGamePage(data) {
 	var p = document.createElement('p');
 	p.id = 'turn';
 	document.body.appendChild(p);
+	//play start game sound
+	sfx['startGame'].play();
 	//add board to moveHistory
 	moveHistory = [boardData];
 	//create backward & forward btns to look through move history
@@ -245,6 +272,14 @@ function onclickSquare(squareEle) {
     }
     //clicked on a square with a "dot" on it, aka a legal move square. if you're allowed to move, execute the move.
     if(hasDot && !noMoreMoves && moveIndex == 0){ 
+		//TODO: play move sound
+		if(getPieceFromSquare(squareEle) == ''){
+			sfx['move'].play();
+		}
+		else{
+			sfx['capture'].play();
+		}
+		
 		//move the piece
 		addOrRemovePiece(squareEle);
 		addOrRemovePiece(squareEle, getPieceFromSquare(selectedSquare));
@@ -257,13 +292,16 @@ function onclickSquare(squareEle) {
     else if(squareEle === selectedSquare){ //clicked on the selected square, so deselect it
     	selectedSquare = undefined;
 		deselect();
+		//TODO: play deselect sound?
     }
     else if(getPieceFromSquare(squareEle)[0] == color){ //clicked on a new square with a friendly piece. they want to select the piece.
 		deselect();
 		select(squareEle);
+		//TODO: play select sound
     }
     else{//clicked on nothing. just deselect.
         deselect();
+        //TODO: play deselect sound?
     }
     //-----see "additional functionality"-----
 	for (var i = 0; i < extraOnclickSquare.after.length; i++) {

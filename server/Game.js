@@ -30,7 +30,6 @@ class Game{
 		//it is assumed that 'color' has just made a move. since you cannot checkmate yourself, we will only check if enemyColor has been checkmated.
 		//if not game over, return false. if game ended by checkmate, return 'checkmate'. if game ended in draw, return 'tie'
 		var enemyColor = (color == 'w') ? 'b' : 'w';
-		console.log(this.grid.getAllMoves(enemyColor), color, enemyColor);
 		if(Object.keys(this.grid.getAllMoves(enemyColor)).length == 0){
 			var checkmate = this.grid.forEach(function(square){
 				if(square.piece == enemyColor+'k' && square.getColorSpecificComponent(enemyColor).visibility.includes('_X')){
