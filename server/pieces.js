@@ -1,4 +1,5 @@
-//TODO: check for checks in getMoves(). make a function to do that somewhere and call it in getMoves(). also check for pinned pieces, discovered checks, etc. simulate the move first and if there is a check then dont do it? but what about the client side, they cant see all the enemies and wont know if a piece is pinned.
+//TODO: bn captured diagonally forward, wtf?
+
 var piecesData = {};
 function initPieces() {
 	new Pawn();
@@ -394,8 +395,26 @@ class Knight extends Piece{
 	}
 
 	getVisibleSquares(square, grid){
-		var results = this.getMoves(square, grid);
-		results.push(square);
+		var results = [square];
+		for (var i = 0; i < grid.width; i++) {
+			results.push(grid.grid[i][square.y]);
+		}
+		const enemyColor = (square.piece[0] == 'w') ? 'b' : 'w';
+		const forward = (enemyColor == 'b') ? 1 : -1;		
+		const moves = [{x: 0, y: forward}, {x: -1, y: -forward}, {x: 1, y: -forward}];
+		var tempX;
+		var tempY;
+		var tempSquare;
+		for (var i = 0; i < 3; i++) {
+			tempX = square.x + moves[i].x;
+			tempY = square.y + moves[i].y;
+			if(grid.squareExists(tempX, tempY)){
+				tempSquare = grid.grid[tempX][tempY];
+				if(tempSquare.piece === '' || tempSquare.piece[0] == enemyColor){
+					results.push(tempSquare);
+				}
+			}
+		}
 		return results;
 	}
 

@@ -37,6 +37,13 @@ socket.on('createRoom', function(data){
 
 socket.on('joinRoom', createGamePage);
 
+socket.on('opponentDC', function(data){
+	//opponent disconnected
+	noMoreMoves = true;
+	updateBoard(data.board);
+	alert('Uh oh, opponent disconnected! Refresh the page to make a new game.');
+});
+
 socket.on('updateBoard', function(data){
 	//update the board according to data sent from server
 	updateBoard(data.board);
@@ -51,6 +58,7 @@ socket.on('updateBoard', function(data){
 
 	if(data.status == 'illegal'){
 			//allow player to try again
+			legalMoves = data.moves;
 			noMoreMoves = false;
 			document.getElementById('turn').innerHTML = 'Your Turn';
 	}
@@ -65,6 +73,12 @@ socket.on('updateBoard', function(data){
 		legalMoves = data.moves;
 		//it is now your turn to move
 		noMoreMoves = false;
+		//if a square was previously selected, reselect it with the new information
+		if(selectedSquare !== undefined){
+			let tempSquare = selectedSquare;
+			deselect();
+			select(tempSquare);
+		}
 		//add the opponent's move to the moveHistory, even if you might not be able to see what they moved.
 		moveHistory.unshift(boardData);
 		document.getElementById('turn').innerHTML = 'Your Turn';
@@ -94,11 +108,12 @@ socket.on('updateBoard', function(data){
 		}
 	}
 	
-})
+});
 
 
 function createMenuPage() {
 	//-----see "additional functionality"-----
+	/*not currently in use
 	var override = false;
 	for (var i = 0; i < extraCreateMenuPage.before.length; i++) {
 		if (extraCreateMenuPage.before[i]()){
@@ -107,7 +122,7 @@ function createMenuPage() {
 	}
 	if(override){
 		return;
-	}
+	}*/
 	//-----default function begins-----
 	//-----create room-----
 	var createBtn = document.createElement('btn');
@@ -136,9 +151,10 @@ function createMenuPage() {
 	menu.appendChild(codeInput);
 	document.body.appendChild(menu);
 	//-----see "additional functionality"-----
+	/*not currently in use
 	for (var i = 0; i < extraCreateMenuPage.after.length; i++) {
 		extraCreateMenuPage.after[i]();
-	}
+	}*/
 }
 
 function createGamePage(data) {
@@ -148,6 +164,7 @@ function createGamePage(data) {
 		return;
 	}
 	//-----see "additional functionality"-----
+	/*not currently in use
 	var override = false;
 	for (var i = 0; i < extraCreateGamePage.before.length; i++) {
 		if (extraCreateGamePage.before[i](data)){
@@ -156,7 +173,7 @@ function createGamePage(data) {
 	}
 	if(override){
 		return;
-	}
+	}*/
 	//-----default function begins-----
 	boardData = data.board;
 	color = data.color;
@@ -243,16 +260,16 @@ function createGamePage(data) {
 		}
 	}
 	document.body.appendChild(btn);
-	//TESTING
-	//promotePawn(1, 1);
+	/*not currently in use
 	//-----see "additional functionality"-----
 	for (var i = 0; i < extraCreateGamePage.after.length; i++) {
 		extraCreateGamePage.after[i](data);
-	}
+	}*/
 }
 
 function onclickSquare(squareEle) {
 	//-----see "additional functionality"-----
+	/*not currently in use
 	var override = false;
 	for (var i = 0; i < extraOnclickSquare.before.length; i++) {
 		if (extraOnclickSquare.before[i](squareEle)){
@@ -261,52 +278,54 @@ function onclickSquare(squareEle) {
 	}
 	if(override){
 		return;
-	}
+	}*/
 	//-----default function begins-----
-	var hasDot = false;
-    for (var i = 0; i < squareEle.children.length; i++) {
-		if(squareEle.children[i].className == 'square__canvas'){
-		    hasDot = true;
-		    break;
-		}
+  var hasDot = false;
+  for (var i = 0; i < squareEle.children.length; i++) {
+    if(squareEle.children[i].className == 'square__canvas'){
+        hasDot = true;
+        break;
     }
-    //clicked on a square with a "dot" on it, aka a legal move square. if you're allowed to move, execute the move.
-    if(hasDot && !noMoreMoves && moveIndex == 0){ 
-		//TODO: play move sound
-		if(getPieceFromSquare(squareEle) == ''){
-			sfx['move'].play();
-		}
-		else{
-			sfx['capture'].play();
-		}
-		
-		//move the piece
-		addOrRemovePiece(squareEle);
-		addOrRemovePiece(squareEle, getPieceFromSquare(selectedSquare));
-		addOrRemovePiece(selectedSquare);
-		//send move to server
-		var moveInfo = {from: [parseInt(selectedSquare.id[0]), parseInt(selectedSquare.id[1])], to: [parseInt(squareEle.id[0]), parseInt(squareEle.id[1])]};
-		deselect();
-		socket.emit('move', moveInfo);
+  }
+  //clicked on a square with a "dot" on it, aka a legal move square. if you're allowed to move, execute the move.
+  if(hasDot && !noMoreMoves && moveIndex == 0){ 
+    //play move sound
+    if(getPieceFromSquare(squareEle) == ''){
+      sfx['move'].play();
     }
-    else if(squareEle === selectedSquare){ //clicked on the selected square, so deselect it
-    	selectedSquare = undefined;
-		deselect();
-		//TODO: play deselect sound?
+    else{
+      sfx['capture'].play();
     }
-    else if(getPieceFromSquare(squareEle)[0] == color){ //clicked on a new square with a friendly piece. they want to select the piece.
-		deselect();
-		select(squareEle);
-		//TODO: play select sound
-    }
-    else{//clicked on nothing. just deselect.
-        deselect();
-        //TODO: play deselect sound?
-    }
-    //-----see "additional functionality"-----
+
+    //move the piece
+    addOrRemovePiece(squareEle);
+    addOrRemovePiece(squareEle, getPieceFromSquare(selectedSquare));
+    addOrRemovePiece(selectedSquare);
+    //send move to server
+    var moveInfo = {from: [parseInt(selectedSquare.id[0]), parseInt(selectedSquare.id[1])], to: [parseInt(squareEle.id[0]), parseInt(squareEle.id[1])]};
+    deselect();
+    socket.emit('move', moveInfo);
+  }
+  else if(squareEle === selectedSquare){ //clicked on the selected square, so deselect it
+    selectedSquare = undefined;
+    deselect();
+  //TODO: play deselect sound?
+  }
+  else if(getPieceFromSquare(squareEle)[0] == color){ //clicked on a new square with a friendly piece. they want to select the piece.
+    deselect();
+    select(squareEle);
+    //TODO: play select sound
+  }
+  else{//clicked on nothing. just deselect.
+      deselect();
+      //TODO: play deselect sound?
+  }
+  //-----see "additional functionality"-----
+  /*not currently in use
 	for (var i = 0; i < extraOnclickSquare.after.length; i++) {
 		extraOnclickSquare.after[i](squareEle);
 	}
+	*/
 }
 
 function addOrRemovePiece(squareEle, piece = undefined) {
@@ -355,7 +374,7 @@ function getPieceFromSquare(squareEle) {
 		return '';
 	}
 	else{
-		return pieceEle.style.backgroundImage.match(/url\(\"client\/imgs\/pieces\/wikipedia\/(.*)\.png\"\)/)[1];
+		return pieceEle.style.backgroundImage.match(/client\/imgs\/pieces\/wikipedia\/(.*)\.png/)[1];
 	}
 }
 
@@ -431,21 +450,10 @@ function promotePawn(x, y) {
 	//deselect(selectedSquare);
 	//mockServer({desc: 'promote', piece: })
 }
-/*
-function getMoves(x, y = undefined){
-	if(y !== undefined){
-		x = x.toString() + y.toString();
-	}
-	if(x in legalMoves){
-		return legalMoves[x];
-	}
-	else{
-		return [];
-	}
-}*/
 
 //Used to access client.js's global variables from other scripts. Used by clientAddons.js
+/*not currently in use
 function getClientVariables() {
 	return {color: color, noMoreMoves: noMoreMoves, selectedSquare: selectedSquare, boardData: boardData, moveHistory: moveHistory};
-}
+}*/
 

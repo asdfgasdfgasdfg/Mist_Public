@@ -3,7 +3,6 @@
 //require('for/other/directories/someFile.js')
 //to access the variables in other files, use 'export', or just remove the 'var' - but this is not reccomended
 
-//TODO: something wrong with ending the game by checkmate, havent tested tie yet
 var express = require('express');
 var app = express();
 var serv = require('http').Server(app);
@@ -20,7 +19,7 @@ app.get('/favicon.ico', function(req, res){
 });
 app.use('/client', express.static(__dirname + '/client'));
 
-serv.listen(2000);
+serv.listen(process.env.PORT || 2000);
 console.log('server started');
 
 //player connections
@@ -48,8 +47,19 @@ io.sockets.on('connection', function(socket){
 	socket.on('disconnect', function(){
 		delete SOCKET_LIST[socket.id];
 		delete promotions[socket.id];
-		//TODO: GAME_LIST[socket.game], tell other player that their opponent has disconnected, and handle the disconnection on client side
-		delete GAME_LIST[socket.game];
+    if(socket.game in GAME_LIST){
+    	let game = GAME_LIST[socket.game];
+		let opponent = game.players['w'];
+		if(opponent == socket.id){
+			opponent = game.players['b'];
+		}
+		if(opponent in SOCKET_LIST){
+			SOCKET_LIST[opponent].emit('opponentDC', {board: game.grid.getBoardDataForColor('all')});
+		}
+		if(socket.game in GAME_LIST){
+			delete GAME_LIST[socket.game];
+		}
+    }
 	});
 
 	/*-----client needs to listen for-----
@@ -73,12 +83,13 @@ io.sockets.on('connection', function(socket){
 			let from = game.grid.grid[data.from[0]][data.from[1]];
 			let to = game.grid.grid[data.to[0]][data.to[1]];
 			let didCapture = (to.piece == '') ? false : true;
-			let legalMoves = piecesData[from.piece[1]].getMoves(from, game.grid);
+			let legalMoves = game.grid.getMoves(from);
 
 			//if it's the player's turn to move, and the move is legal, then move piece and send new board
 			if( ((color == 'w' && game.turn%2 == 1) || (color == 'b' && game.turn%2 == 0)) && legalMoves.includes(to) ){
 				piecesData[from.piece[1]].move(from, to);
 				game.grid.recalibrate();
+				game.grid.killGhosts(color);
 				//if they moved a pawn and it has reached the top of the board and needs to promote
 				if(to.piece == (color + 'p') && piecesData['p'].needsToPromote(to, game.grid)){
 					promotions[socket.id] = [to.x, to.y];
@@ -119,7 +130,7 @@ io.sockets.on('connection', function(socket){
 		}
 		//move was illegal
 		if(!legal){
-			socket.emit('updateBoard', {status: 'illegal', board: game.grid.getBoardDataForColor(color)});
+			socket.emit('updateBoard', {status: 'illegal', board: game.grid.getBoardDataForColor(color), moves: game.grid.getAllMoves(color)});
 		}
 	});
 

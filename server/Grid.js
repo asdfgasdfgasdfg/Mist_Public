@@ -16,16 +16,6 @@ class Grid{
 		}
 	}
 	setStartingPosition(){
-		//Mock position for now
-		/*
-		this.grid[0][0].piece = 'wp';
-		this.grid[5][0].piece = 'wb';
-		this.grid[3][7].piece = 'bp';
-		this.grid[0][5].piece = 'bp';
-		//this.grid[0][1].piece = 'wr';
-		this.grid[0][3].piece = 'bk';
-		*/
-		//---Actual position---
 		var wb = [{color: 'w', yCoor: function(y){return y}}, {color: 'b', yCoor: function(y, h){return h-y-1}}];
 		for (var c = 0; c < 2; c++) {
 			//---pawns---
@@ -48,7 +38,6 @@ class Grid{
 			//---kings---
 			this.grid[4][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'k';
 		}
-
 	}
 	//returns an array of all the squares in the board. each square is represented by a dictionary {state: 'cloudy/clear + (_X)?', piece: 'piece initials', ... optional additional info}
 	getBoardDataForColor(color){
@@ -134,6 +123,38 @@ class Grid{
 		}
 		return res;
 	}
+	getMoves(square){
+		if(square.piece == ''){
+			return []; //there is no piece here, therefore it cannot move anywhere
+		}
+
+		var moves = piecesData[square.piece[1]].getMoves(square, this);;
+		var piecesList = [];
+		for (var key in piecesData){
+			piecesList.push(piecesData[key]);
+		}
+		var gridCopy = this.createCopy();
+		var enemyColor = (square.piece[0] == 'w') ? 'b' : 'w';
+		for (var i = moves.length-1; i >= 0; i--) {
+			piecesData[square.piece[1]].move(gridCopy.grid[square.x][square.y], gridCopy.grid[moves[i].x][moves[i].y]);
+			let inCheck = gridCopy.forEach(function(sq){
+				//loop through grid, find the square with your king, check if the king is being attacked. if it is, then this is an invalid move.
+				if(sq.piece == square.piece[0] + 'k'){
+					if(gridCopy.getAttackers(sq, piecesList, enemyColor).length > 0){
+						return true;
+					}
+					else{
+						return false;
+					}
+				}
+			});
+			if(inCheck[0]){
+				moves.splice(i, 1);
+			}
+			gridCopy = this.createCopy();
+		}
+		return moves;
+	}
 	//gets a list of all pieces in the list that can move to this square in 1 turn. useful for checks and similar things.
 	//the list of pieces is a customisable parameter so that it will work with different sets of pieces in the future.
 	//for example, i might add options for what "faction" you wanna play with, and each one will have their own unique pieces.
@@ -194,6 +215,12 @@ class Grid{
 					checks[i].getColorSpecificComponent(square.piece[0]).visibility += '_X';
 				}*/
 			}
+		});
+	}
+	//kills ghosts for 'color'. use: after white makes a move, all white ghosts should die, as they should only live for 1 turn.
+	killGhosts(color){
+		this.forEach(function(square){
+			square.killGhosts(color);
 		});
 	}
 	//calls func for each square in the grid. if func returns something, the returned values will be returned in the list 'results'.
