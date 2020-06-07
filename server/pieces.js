@@ -514,7 +514,6 @@ class Queen extends Piece{
 		var results = [];
 		const enemyColor = (color == 'w') ? 'b' : 'w';
 		//if this square is invisible to 'color', no 'color' Queens will be able to see or attack it.
-		if(square.x == 4 && square.y == 8){console.log(square);}
 		if(!square.getColorSpecificComponent(color).visibility.includes('clear')){return []};
 		
 		//[top right, top left, bottom right, bottom left, up, down, left, right]
