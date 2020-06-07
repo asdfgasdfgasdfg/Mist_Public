@@ -154,9 +154,6 @@ class Pawn extends Piece{
 	}
 
 	getVisibleSquares(square, grid){
-		if(square.piece[1] != 'p'){
-			return; //invalid parameter, piece is not a pawn
-		}
 	    var results = [square]; //it's own square is always visible
 	    
 	    var color = square.piece[0];
@@ -384,8 +381,8 @@ class Knight extends Piece{
 				}
 			}
 		}
-		//---jumps (any enemy piece on the same row)---
-		for (var i = 0; i < grid.width; i++) {
+		//---jumps (any enemy piece on the same row and same color square)---
+		for (var i = (square.x%2); i < grid.width; i+=2) {
 			tempSquare = grid.grid[i][square.y];
 			if(tempSquare.piece[0] == enemyColor){
 				results.push(tempSquare);
@@ -396,7 +393,8 @@ class Knight extends Piece{
 
 	getVisibleSquares(square, grid){
 		var results = [square];
-		for (var i = 0; i < grid.width; i++) {
+		//---jumps (any enemy piece on the same row and same color square)---
+		for (var i = (square.x%2); i < grid.width; i+=2) {
 			results.push(grid.grid[i][square.y]);
 		}
 		const enemyColor = (square.piece[0] == 'w') ? 'b' : 'w';
@@ -463,18 +461,16 @@ class Queen extends Piece{
 		var vector;
 		var tempX;
 		var tempY;
-		var tempPiece;
+		var tempSquare;
 		for (var i = 0; i < 8; i++) {
 			vector = directions[i];
 			tempX = square.x+vector.x;
 			tempY = square.y+vector.y;
 			while(grid.squareExists(tempX, tempY)){
-				tempPiece = grid.grid[tempX][tempY].piece;
-				if(tempPiece[0] == color){break;}//can't move on top of friendly piece
-				if(grid.grid[tempX][tempY].getColorSpecificComponent(square.piece[0]).visibility.includes('clear') && (tempPiece === '' || tempPiece === enemyColor+'k')){//if it is visible, and is either empty or the enemy king, it's a legal move
-					results.push(grid.grid[tempX][tempY]);
-				}
-				if(tempPiece !== ''){
+				tempSquare = grid.grid[tempX][tempY];
+				if(tempSquare.piece[0] == color || !tempSquare.getColorSpecificComponent(color).visibility.includes('clear')){break;}//can't past a friendly piece or a cloudy square
+				results.push(grid.grid[tempX][tempY]);
+				if(tempSquare.piece !== ''){
 					break; //there is a piece on this square. It can't move beyond the piece.
 				}
 				tempX += vector.x;
@@ -484,11 +480,11 @@ class Queen extends Piece{
 		return results;
 	}
 	getVisibleSquares(square, grid){
-		/*
-		var results = this.getMoves(square, grid);
-		results.push(square);
-		return results;*/
 		
+		//var results = this.getMoves(square, grid);
+		//results.push(square);
+		return [square];
+		/*
 		var results = [square];
 		const color = square.piece[0];
 		const directions = [{x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}, {x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}];
@@ -511,14 +507,15 @@ class Queen extends Piece{
 				tempY += vector.y;
 			}
 		}
-		return results;
+		return results;*/
 	}
 	getAttackers(square, grid, color){
-		//Assumes the square in question is either empty or contains the king, since Queens can only capture kings or move into empty spots
+		//(Deprecated) Assumes the square in question is either empty or contains the king, since Queens can only capture kings or move into empty spots
 		var results = [];
 		const enemyColor = (color == 'w') ? 'b' : 'w';
-		//(Deprecated) if this square is invisible to 'color', no 'color' Queens will be able to see or attack it.
-		//if(!square.getColorSpecificComponent(color).visibility.includes('clear')){return []};
+		//if this square is invisible to 'color', no 'color' Queens will be able to see or attack it.
+		if(square.x == 4 && square.y == 8){console.log(square);}
+		if(!square.getColorSpecificComponent(color).visibility.includes('clear')){return []};
 		
 		//[top right, top left, bottom right, bottom left, up, down, left, right]
 		const directions = [{x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}, {x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}];
@@ -533,11 +530,11 @@ class Queen extends Piece{
 			tempY = square.y+vector.y;
 			while(grid.squareExists(tempX, tempY)){
 				tempPiece = grid.grid[tempX][tempY].piece;
-				if(tempPiece !== ''){//there is a piece on this square
+				if(tempPiece !== '' || !grid.grid[tempX][tempY].getColorSpecificComponent(color).visibility.includes('clear')){//there is a piece on this square or this square is not visible
 					if(tempPiece == color + 'q'){ //there is a 'color' queen on this square, add it to list of attackers
 						results.push(grid.grid[tempX][tempY]);
 					}
-					break;
+					break;//queens cannot move past an occupied square or a cloudy square
 				}
 				tempX += vector.x;
 				tempY += vector.y;

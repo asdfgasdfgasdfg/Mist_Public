@@ -54,7 +54,7 @@ class Grid{
 							boardData[x].push({state: squareVisibility, piece: ''});
 						}
 						else if(squareVisibility.includes('clear')){
-							if(this.grid[x][y].piece[1] == 'q' && squareColorComponent.observers.length == 0){
+							if(this.grid[x][y].piece[1] == 'q' && squareColorComponent.observers.length == 0 && squareColorComponent.ghostObservers == 0){
 								boardData[x].push({state: squareVisibility, piece: ''});
 							}
 							else{
@@ -98,6 +98,7 @@ class Grid{
 			var from = gridCopy.grid[allMoves[i][0][0]][allMoves[i][0][1]];
 			for (var x = movesList.length-1; x >= 0; x--) {
 				piecesData[from.piece[1]].move(from, gridCopy.grid[movesList[x][0]][movesList[x][1]]);
+				gridCopy.recalibrate();
 				let inCheck = gridCopy.forEach(function(square){
 					//loop through grid, find the square with your king, check if the king is being attacked. if it is, then this is an invalid move.
 					if(square.piece == color + 'k'){
@@ -298,23 +299,23 @@ class Square{
 		//----------------------------------------------------------------------------------------------------
 		//kill one white ghost from each square
 		if(color == 'w'){
-			if(this.white.ghostsObservers > 0){
-				--this.white.ghostsObservers;
+			if(this.white.ghostObservers > 0){
+				--this.white.ghostObservers;
 			}
 		}
 		//kill one black ghost from each square
 		else if(color == 'b'){
-			if(this.black.ghostsObservers > 0){
-				--this.black.ghostsObservers;
+			if(this.black.ghostObservers > 0){
+				--this.black.ghostObservers;
 			}
 		}
 		//kill all white ghosts
 		else if(color == 'wReset'){
-			this.white.ghostsObservers = 0;
+			this.white.ghostObservers = 0;
 		}
 		//kill all black ghosts
 		else if(color == 'bReset'){
-			this.black.ghostsObservers = 0;
+			this.black.ghostObservers = 0;
 		}
 	}
 }

@@ -44,7 +44,7 @@
     background-image: url("imgs/red3.png");
 }
 
-.square__canvas {
+.square__canvas, .square__canvas_v {
     position: absolute;
     top: 0;
     left: 0;

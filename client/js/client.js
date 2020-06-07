@@ -1,6 +1,7 @@
 const options = {
 	width: 500,
 	legalMarksColor: 'cornflowerblue',
+	visibleMarksColor: 'green'
 }
 
 var color;
@@ -223,6 +224,12 @@ function createGamePage(data) {
 				}
 			    //onclick
 			    square.onclick = function(){onclickSquare(this)};
+			    //onrightclick
+			    square.addEventListener('contextmenu', function(event){
+				    event.preventDefault();
+				    onclickSquare(this, true);
+				    return false;
+				}, false);
 			    //add square to board
 			    board.appendChild(square);
 	      }
@@ -267,7 +274,7 @@ function createGamePage(data) {
 	}*/
 }
 
-function onclickSquare(squareEle) {
+function onclickSquare(squareEle, rightClick = false) {
 	//-----see "additional functionality"-----
 	/*not currently in use
 	var override = false;
@@ -289,22 +296,28 @@ function onclickSquare(squareEle) {
   }
   //clicked on a square with a "dot" on it, aka a legal move square. if you're allowed to move, execute the move.
   if(hasDot && !noMoreMoves && moveIndex == 0){ 
-    //play move sound
-    if(getPieceFromSquare(squareEle) == ''){
-      sfx['move'].play();
-    }
-    else{
-      sfx['capture'].play();
-    }
+  	if(!rightClick){
+	    //play move sound
+	    if(getPieceFromSquare(squareEle) == ''){
+	      sfx['move'].play();
+	    }
+	    else{
+	      sfx['capture'].play();
+	    }
 
-    //move the piece
-    addOrRemovePiece(squareEle);
-    addOrRemovePiece(squareEle, getPieceFromSquare(selectedSquare));
-    addOrRemovePiece(selectedSquare);
-    //send move to server
-    var moveInfo = {from: [parseInt(selectedSquare.id[0]), parseInt(selectedSquare.id[1])], to: [parseInt(squareEle.id[0]), parseInt(squareEle.id[1])]};
-    deselect();
-    socket.emit('move', moveInfo);
+	    //move the piece
+	    addOrRemovePiece(squareEle);
+	    addOrRemovePiece(squareEle, getPieceFromSquare(selectedSquare));
+	    addOrRemovePiece(selectedSquare);
+	    //send move to server
+	    var moveInfo = {from: [parseInt(selectedSquare.id[0]), parseInt(selectedSquare.id[1])], to: [parseInt(squareEle.id[0]), parseInt(squareEle.id[1])]};
+	    deselect();
+	    socket.emit('move', moveInfo);
+	}
+	else{
+		//if it was a right click, just deselect and ignore everything else
+		deselect();
+	}
   }
   else if(squareEle === selectedSquare){ //clicked on the selected square, so deselect it
     selectedSquare = undefined;
@@ -313,7 +326,7 @@ function onclickSquare(squareEle) {
   }
   else if(getPieceFromSquare(squareEle)[0] == color){ //clicked on a new square with a friendly piece. they want to select the piece.
     deselect();
-    select(squareEle);
+    select(squareEle, rightClick);
     //TODO: play select sound
   }
   else{//clicked on nothing. just deselect.
@@ -379,10 +392,10 @@ function getPieceFromSquare(squareEle) {
 }
 
 function deselect() {
-	//remove legal move dots
-	var legalMoveDots = document.getElementsByClassName('square__canvas');
-    while(legalMoveDots.length > 0){
-        legalMoveDots[0].parentNode.removeChild(legalMoveDots[0]);
+	//remove legal move dots and visible square dots
+	var dottedSquares = Array.from(document.getElementsByClassName('square__canvas')).concat(Array.from(document.getElementsByClassName('square__canvas_v')));
+    for(var i = 0; i < dottedSquares.length; i++){
+        dottedSquares[i].parentNode.removeChild(dottedSquares[i]);
     }
     //remove selected square highlight. while loop should be redundant as there should only be one selected square, but cant be too safe.
     var highlight = document.getElementsByClassName('square_selected');
@@ -394,15 +407,18 @@ function deselect() {
     selectedSquare = undefined;
 }
 
-function select(squareEle) {
+function select(squareEle, rightClick = false) {
 	selectedSquare = squareEle;
 	//highlight selected square
 	var highlight = document.createElement('div');
 	highlight.className = 'square_selected';
 	squareEle.appendChild(highlight);
-	//draw legal move dots
+	//draw legal move dots, or in the case of right click, draw visible square dots
 	var tempLegalMoves;
-	if(!noMoreMoves && moveIndex == 0){
+	if(rightClick){
+		tempLegalMoves = getVisibleSquares(boardData, squareEle.id);
+	}
+	else if(!noMoreMoves && moveIndex == 0){
 		if(squareEle.id in legalMoves){
 			tempLegalMoves = legalMoves[squareEle.id];
 		}
@@ -413,17 +429,17 @@ function select(squareEle) {
 	else{
 		tempLegalMoves = getMoves(boardData, squareEle.id);
 	}
-	//var legalMoves = getMoves(boardData, squareEle.id);
 	var width = options.width / Math.sqrt(document.getElementById('board').childElementCount);
+	var className = (rightClick) ? 'square__canvas_v' : 'square__canvas';
 	for (var i = 0; i < tempLegalMoves.length; i++) {
 	    var canvas = document.createElement("canvas");
 	    canvas.setAttribute("height", width + "px");
 	    canvas.setAttribute("width", width + "px");
-	    canvas.className = 'square__canvas';
+	    canvas.className = className;
 	    var ctx = canvas.getContext("2d");
 	    ctx.beginPath();
 	    ctx.arc(width / 2, width / 2, width / 10, 0, 2 * Math.PI);
-	    ctx.fillStyle = options.legalMarksColor;
+	    ctx.fillStyle = (rightClick) ? options.visibleMarksColor : options.legalMarksColor;
 	    ctx.fill();
 	    document.getElementById(tempLegalMoves[i][0].toString() + tempLegalMoves[i][1].toString()).appendChild(canvas);
 	}

@@ -18,6 +18,26 @@ function getMoves(boardData, x, y = undefined) {
 	return moves;
 }
 
+function getVisibleSquares(boardData, x, y = undefined){
+	var visibleSquares;
+	var isString = false;
+	//if passed a string through "getMoves('xy')", return a list of coors as strings
+	if(x.length == 2 && y === undefined){
+		isString = true;
+		y = parseInt(x[1]);
+		x = parseInt(x[0]);
+		visibleSquares = piecesList[boardData[x][y].piece[1]].getVisible(x, y, boardData);
+		for (var i = 0; i < visibleSquares.length; i++) {
+			visibleSquares[i] = visibleSquares[i][0].toString() + visibleSquares[i][1].toString();
+		}
+	}
+	//if passed integer coors through "getMoves(x, y)", return a list of integer coors
+	else if(y !== undefined){
+		visibleSquares = piecesList[boardData[x][y].piece[1]].getVisible(x, y, boardData);
+	}
+	return visibleSquares;
+}
+
 function squareExists(x, y){
 	if(x > 7 || y > 8 || x < 0 || y < 0){
 		return false;
@@ -65,6 +85,17 @@ class ClientPawn{
 	    }
 	    return results;
 	}
+	getVisible(x, y, boardData){
+		var results = [];
+		var forward = (boardData[x][y].piece[0] == 'w') ? 1 : -1;
+		if(squareExists(x+1, y+forward)){
+			results.push([x+1, y+forward]);
+	    }
+	    if(squareExists(x-1, y+forward)){
+			results.push([x-1, y+forward]);
+	    }
+	    return results;
+	}
 }
 
 class ClientBishop{
@@ -72,10 +103,8 @@ class ClientBishop{
 		this.name = 'b';
 	    piecesList[this.name] = this;
 	}
-	getMoves(x, y, boardData){
+	getMoves(x, y){
 		var results = [];
-
-		const color = boardData[x][y].piece[0];
 
 		//[top right diagonal, top left diagonal, bottom right diagonal, bottom left diagonal]
 		var diagVectors = [{x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}];
@@ -93,6 +122,25 @@ class ClientBishop{
 
 		return results;
 	}
+	getVisible(x, y, boardData){
+		var results = [];
+
+		//[top right diagonal, top left diagonal, bottom right diagonal, bottom left diagonal]
+		const diagVectors = [{x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}];
+		//get moves for each direction (top right, top left, bottom right, bottom left)
+		for (var i = 0; i < 4; i++) {
+			let vector = diagVectors[i];
+			var tempX = x+vector.x;
+			var tempY = y+vector.y;
+			while(squareExists(tempX, tempY)){
+				results.push([tempX, tempY]);
+				if(boardData[tempX][tempY].piece != ''){break;}
+				tempX += vector.x;
+				tempY += vector.y;
+			}
+		}
+		return results;
+	}
 }
 
 class ClientRook{
@@ -100,9 +148,8 @@ class ClientRook{
 		this.name = 'r';
 	    piecesList[this.name] = this;
 	}
-	getMoves(x, y, boardData){
+	getMoves(x, y){
 		var results = [];
-		const color = boardData[x][y].piece[0];
 
 		//[up, down, left, right]
 		const horizontalVectors = [{x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}];
@@ -119,6 +166,25 @@ class ClientRook{
 		}
 		return results;
 	}
+	getVisible(x, y, boardData){
+		var results = [];
+
+		//[top right diagonal, top left diagonal, bottom right diagonal, bottom left diagonal]
+		const horizontalVectors = [{x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}];
+		//get moves for each direction (top right, top left, bottom right, bottom left)
+		for (var i = 0; i < 4; i++) {
+			let vector = horizontalVectors[i];
+			var tempX = x+vector.x;
+			var tempY = y+vector.y;
+			while(squareExists(tempX, tempY)){
+				results.push([tempX, tempY]);
+				if(boardData[tempX][tempY].piece != ''){break;}
+				tempX += vector.x;
+				tempY += vector.y;
+			}
+		}
+		return results;
+	}
 }
 
 class ClientKnight{
@@ -128,30 +194,28 @@ class ClientKnight{
 	}
 	getMoves(x, y, boardData){
 		var results = [];
-		var square = boardData[x][y];
-		const enemyColor = (square.piece[0] == 'w') ? 'b' : 'w';
-		const forward = (enemyColor == 'b') ? 1 : -1;
+		const forward = (boardData[x][y].piece[0] == 'w') ? 1 : -1;
 
 		//---regular moves---
 		//[up, bottom left, bottom right]
 		const moves = [{x: 0, y: forward}, {x: -1, y: -forward}, {x: 1, y: -forward}];
 		var tempX;
 		var tempY;
-		var tempSquare;
 		for (var i = 0; i < 3; i++) {
 			tempX = x + moves[i].x;
 			tempY = y + moves[i].y;
 			if(squareExists(tempX, tempY)){
-				tempSquare = boardData[tempX][tempY];
 				results.push([tempX, tempY]);
 			}
 		}
-		//---jumps (any enemy piece on the same row)---
-		for (var i = 0; i < boardData.length; i++) {
-			tempSquare = boardData[i][y];
+		//---jumps (any enemy piece on the same row and on the same color square)---
+		for (var i = (x%2); i < boardData.length; i+=2) {
 			results.push([i, y]);
 		}
 		return results;
+	}
+	getVisible(x, y, boardData){
+		return this.getMoves(x, y, boardData);
 	}
 }
 
@@ -162,8 +226,6 @@ class ClientQueen{
 	}
 	getMoves(x, y, boardData){
 		var results = [];
-		const color = boardData[x][y].piece[0];
-		const enemyColor = (color == 'w') ? 'b' : 'w';
 
 		//[top right, top left, bottom right, bottom left, up, down, left, right]
 		const directions = [{x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}, {x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}];
@@ -178,6 +240,25 @@ class ClientQueen{
 				tempY += vector.y;
 			}
 		}
+		return results;
+	}
+	getVisible(x, y, boardData){
+		var results = [];
+/*
+		//[top right, top left, bottom right, bottom left, up, down, left, right]
+		const directions = [{x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}, {x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}];
+		//get moves for each direction (top right, top left, bottom right, bottom left)
+		for (var i = 0; i < 8; i++) {
+			let vector = directions[i];
+			var tempX = x+vector.x;
+			var tempY = y+vector.y;
+			while(squareExists(tempX, tempY)){
+				results.push([tempX, tempY]);
+				if(boardData[tempX][tempY].piece != ''){break;}
+				tempX += vector.x;
+				tempY += vector.y;
+			}
+		}*/
 		return results;
 	}
 }
@@ -208,6 +289,9 @@ class ClientKing{
 			}
 		}
 		return results;
+	}
+	getVisible(x, y, boardData){
+		return this.getMoves(x, y, boardData);
 	}
 }
 
