@@ -198,7 +198,7 @@ class ClientKnight{
 
 		//---regular moves---
 		//[up, bottom left, bottom right]
-		const moves = [{x: 0, y: forward}, {x: -1, y: -forward}, {x: 1, y: -forward}];
+		const moves = [{x: 0, y: -forward}, {x: -1, y: forward}, {x: 1, y: forward}];
 		var tempX;
 		var tempY;
 		for (var i = 0; i < 3; i++) {
