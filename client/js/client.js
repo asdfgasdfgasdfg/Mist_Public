@@ -11,6 +11,7 @@ var boardData;
 var moveHistory;
 var moveIndex = 0; //move index of 0 means the last recorded move. move index of 1 is just 1 move before that.
 var legalMoves = {};
+var spam = 5;
 
 var sfx = {
 	move: new Audio("client/sfx/Move.mp3"),
@@ -126,22 +127,36 @@ function createMenuPage() {
 	}*/
 	//-----default function begins-----
 	//-----create room-----
-	var createBtn = document.createElement('btn');
+	var createBtn = document.createElement('a');
+	createBtn.className = 'transparentBtn';
 	var codeDisplay = document.createElement('p');
 	codeDisplay.id = 'codeDisplay';
 	createBtn.innerHTML = 'Create Room';
 	createBtn.onclick = function(){
-		document.getElementById('codeDisplay').innerHTML = 'Generating code...';
-		socket.emit('createRoom');
+		if(spam < 1){
+			alert("Please don't spam.");
+		}
+		else{
+			--spam;
+			document.getElementById('codeDisplay').innerHTML = 'Generating code...';
+			socket.emit('createRoom');
+		}
 	}
 	//-----join room-----
-	var joinBtn = document.createElement('btn');
+	var joinBtn = document.createElement('a');
+	joinBtn.className = 'transparentBtn';
 	codeInput = document.createElement('input');
 	codeInput.id = 'codeInput';
 	joinBtn.innerHTML = 'Join';
 	joinBtn.onclick = function(){
-		var code = document.getElementById('codeInput').value;
-		socket.emit('joinRoom', {code: code});
+		if(spam < 1){
+			alert("Please don't spam.");
+		}
+		else{
+			--spam;
+			var code = document.getElementById('codeInput').value;
+			socket.emit('joinRoom', {code: code});
+		}
 	}
 	//-----add to document-----
 	var menu = document.createElement('div');

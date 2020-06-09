@@ -243,7 +243,7 @@ class ClientQueen{
 		return results;
 	}
 	getVisible(x, y, boardData){
-		var results = [];
+		var results = this.getMoves(x, y, boardData);
 /*
 		//[top right, top left, bottom right, bottom left, up, down, left, right]
 		const directions = [{x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}, {x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}];

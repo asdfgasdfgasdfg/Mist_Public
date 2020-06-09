@@ -218,6 +218,11 @@ io.sockets.on('connection', function(socket){
 			//invalid connection
 			return;
 		}
+		//if socket already created a game, delete that game so you can replace it w/ a new one
+		if(socket.game != 'N/A'){
+			delete GAME_LIST[socket.game];
+			socket.game = 'N/A';
+		}
 		let error =  (data.code === undefined || GAME_LIST[data.code] === undefined || data.code == socket.game) ? true : false;
 		if(error){
 			socket.emit('joinRoom', {error: 'Invalid code. Are you sure you typed it in correctly?'});
