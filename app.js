@@ -60,6 +60,13 @@ io.sockets.on('connection', function(socket){
 			delete GAME_LIST[socket.game];
 		}
     }
+    //spectator
+    else{
+    	let code = socket.game.split('/')[1];
+    	if(code in GAME_LIST){
+    		GAME_LIST[code].removeSpectator(socket.id);
+    	}
+    }
 	});
 
 	/*-----client needs to listen for-----
@@ -73,8 +80,6 @@ io.sockets.on('connection', function(socket){
 			//invalid connection
 			return;
 		}
-		//TODO: 
-		//check for game.isGameOver(), if gameOver, call the gameOver function.
 		var game = GAME_LIST[socket.game];
 		var legal = false;
 
@@ -91,7 +96,7 @@ io.sockets.on('connection', function(socket){
 				game.grid.recalibrate();
 				game.grid.killGhosts(color);
 				//if they moved a pawn and it has reached the top of the board and needs to promote
-				if(to.piece == (color + 'p') && piecesData['p'].needsToPromote(to, game.grid)){
+				if(to.piece == (color + 'p') && piecesData['p'].needsToPromote(to)){
 					promotions[socket.id] = [to.x, to.y];
 					//update their board and ask them to choose a piece to promote to
 					socket.emit('updateBoard', {status: 'promote', board: game.grid.getBoardDataForColor(color), x: to.x, y: to.y});
@@ -110,20 +115,27 @@ io.sockets.on('connection', function(socket){
 						let moves = game.grid.getAllMoves(enemyColor);
 						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'opponentMoved', board: game.grid.getBoardDataForColor(enemyColor), moves: moves, didCapture: didCapture});
 					}
-					//TODO: delete the game, and on the client side, allow players option to play again or go back to menu screen
-					else if(gameStatus == 'checkmate'){
-						//send new board to winner
-						socket.emit('updateBoard', {status: 'win', board: game.grid.getBoardDataForColor('all')});
-						//send new board to loser
-						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'lose', board: game.grid.getBoardDataForColor('all'), didCapture: didCapture});
+					else{
+						if(gameStatus == 'checkmate'){
+							//send new board to winner
+							socket.emit('updateBoard', {status: 'win', board: game.grid.getBoardDataForColor('all')});
+							//send new board to loser
+							SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'lose', board: game.grid.getBoardDataForColor('all'), didCapture: didCapture});
+						}
+						else if(gameStatus == 'tie'){
+							//send new board to winner
+							socket.emit('updateBoard', {status: 'tie', board: game.grid.getBoardDataForColor('all')});
+							//send new board to loser
+							SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'tie', board: game.grid.getBoardDataForColor('all'), didCapture: didCapture});
+						}
+						delete GAME_LIST[socket.game];
+						socket.game = 'N/A';
+						SOCKET_LIST[game.players[enemyColor]].game = 'N/A';
+						game.spectators.forEach(spectator => SOCKET_LIST[spectator].game = 'N/A');
 					}
-					else if(gameStatus == 'tie'){
-						//send new board to winner
-						socket.emit('updateBoard', {status: 'tie', board: game.grid.getBoardDataForColor('all')});
-						//send new board to loser
-						SOCKET_LIST[game.players[enemyColor]].emit('updateBoard', {status: 'tie', board: game.grid.getBoardDataForColor('all'), didCapture: didCapture});
-					}
-					
+					//send new board to each of the spectators.
+					let package = {status: 'spec', board: game.grid.getBoardDataForColor('spec'), didCapture: didCapture};
+					game.spectators.forEach(spectator => SOCKET_LIST[spectator].emit('updateBoard', package));
 				}
 				legal = true;
 			}
@@ -206,35 +218,43 @@ io.sockets.on('connection', function(socket){
 			//invalid connection
 			return;
 		}
-		let error =  (data.code === undefined || GAME_LIST[data.code] === undefined || !( (GAME_LIST[data.code].players['w'] == 'waiting' || GAME_LIST[data.code].players['b'] == 'waiting') && (GAME_LIST[data.code].players['w'] != GAME_LIST[data.code].players['b'])) || data.code == socket.game) ? true : false;
+		let error =  (data.code === undefined || GAME_LIST[data.code] === undefined || data.code == socket.game) ? true : false;
 		if(error){
 			socket.emit('joinRoom', {error: 'Invalid code. Are you sure you typed it in correctly?'});
 		}
 		else{
-			//add player to room
-			socket.game = data.code;
-			let game = GAME_LIST[data.code];
-			if(game.players['w'] == 'waiting'){
-				game.players['w'] = socket.id;
+			var game = GAME_LIST[data.code];
+			if(game.players['w'] != 'waiting' && game.players['b'] != 'waiting'){
+				//add spectator to room
+				game.spectators.push(socket.id);
+				socket.game = 'spec/' + data.code;
+				socket.emit('joinRoom', {board: game.grid.getBoardDataForColor('spec'), color: 'spec', turn: game.turn});
 			}
 			else{
-				game.players['b'] = socket.id;
-			}
-			//send game data to both players and tell them to join the room on the client side
-			SOCKET_LIST[game.players['w']].emit('joinRoom', {
-				code: game.code,
-				board: game.grid.getBoardDataForColor('w'),
-				turn: game.turn,
-				color: 'w',
-				moves: game.grid.getAllMoves('w')
-			});
+				//add player to room
+				socket.game = data.code;
+				if(game.players['w'] == 'waiting'){
+					game.players['w'] = socket.id;
+				}
+				else{
+					game.players['b'] = socket.id;
+				}
+				//send game data to both players and tell them to join the room on the client side
+				SOCKET_LIST[game.players['w']].emit('joinRoom', {
+					code: game.code,
+					board: game.grid.getBoardDataForColor('w'),
+					turn: game.turn,
+					color: 'w',
+					moves: game.grid.getAllMoves('w')
+				});
 
-			SOCKET_LIST[game.players['b']].emit('joinRoom', {
-				code: game.code,
-				board: game.grid.getBoardDataForColor('b'),
-				turn: game.turn,
-				color: 'b'
-			});
+				SOCKET_LIST[game.players['b']].emit('joinRoom', {
+					code: game.code,
+					board: game.grid.getBoardDataForColor('b'),
+					turn: game.turn,
+					color: 'b'
+				});
+			}
 		}
 
 	});

@@ -1,10 +1,11 @@
 var Grid = require('./Grid.js');
-var piecesData = require('./pieces.js').PIECES_LIST;
+//var piecesData = require('./pieces.js').PIECES_LIST;
 
 class Game{
 	constructor(takenCodes){
 		this.turn = 1;
 		this.players = {'w': 'waiting', 'b': 'waiting'};
+		this.spectators = [];
 		this.grid = new Grid.Grid(8, 9);
 		this.grid.setStartingPosition();
 		this.grid.recalibrate();
@@ -46,6 +47,12 @@ class Game{
 			}
 		}
 		return 'playing';
+	}
+	removeSpectator(id){
+		let i = this.spectators.indexOf(id);
+		if(i >= 0){
+			this.spectators.splice(i, 1);
+		}
 	}
 }
 

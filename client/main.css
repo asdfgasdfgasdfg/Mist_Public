@@ -4,14 +4,8 @@
 // Copyright (c) 2017 Nimzozo
 */
 
-.squares {
-    position: relative;
-    display: inline-block;
-    border: 1px solid saddlebrown;
-    vertical-align: top;
-}
 /* all squares */
-.square_black_clear, .square_white_clear, .square_black_cloudy, .square_white_cloudy, .square_black_clear_X, .square_white_clear_X, .square_black_cloudy_X, .square_white_cloudy_X{
+.square{
     display: inline-block;
     position: relative;
     width: 12.5%;
@@ -20,26 +14,44 @@
     vertical-align: top;
 }
 /* all white squares */
-.square_white_clear, .square_white_cloudy , .square_white_clear_X, .square_white_cloudy_X{
+.square.white{
     background-color: wheat;
 }
 /* all white cloudy squares */
-.square_white_cloudy, .square_white_cloudy_X{
+.square.white.cloudy{
     /*opacity: 0.5;*/
     filter: contrast(80%);
 }
 /* all black squares */
-.square_black_clear, .square_black_cloudy, .square_black_clear_X, .square_black_cloudy_X {
+.square.black{
     background-color: #c9a577;
     filter: brightness(105%);
 }
 /* all black cloudy squares */
-.square_black_cloudy, .square_black_cloudy_X{
+.square.black.cloudy{
     /*opacity: 0.7;*/
     filter: brightness(100%) contrast(50%);
 }
-/* all checked/guarded squares (has a red X on it or is reddened)*/
-.square_black_clear_X, .square_white_clear_X, .square_black_cloudy_X, .square_white_cloudy_X {
+/*---for spectators---*/
+/*all black squares that're only visible to black*/
+.square.black.b{
+    background-color: #c99477;
+}
+/*all white squares that're only visible to black*/
+.square.white.b{
+    background-color: #f5b3b3;
+}
+/*all black squares that're only visible to white*/
+.square.black.w{
+    background-color: #c2c977;
+}
+/*all white squares that're only visible to white*/
+.square.white.w{
+    background-color: #f5f3b3;
+}
+/*--------------------*/
+/* all squares in check (reddened)*/
+.square.X{
     background-size: 100% 100%;
     background-image: url("imgs/red3.png");
 }
@@ -89,7 +101,7 @@
     background-color: lightsteelblue;
 }
 
-.square_selected {
+.square.selected {
     background-size: 100% 100%;
     position: absolute;
     top: 0;

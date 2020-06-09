@@ -4,16 +4,18 @@ class Grid{
 	constructor(width, height){
 		//Note: code is only built around a square grid rn, a rectangal or any other shape may cause problems.
 		//TODO: change it to work with rectangles or maybe even any shape. look for 7s or 8s, grid.width, for loops that use i < width, and especially the getMoves() methods
-		this.grid = [];
 		this.width = width;
 		this.height = height;
 
+		this.grid = [];
 		for (var x = 0; x < width; x++) {
 			this.grid.push([]);
 			for (var y = 0; y < height; y++) {
-				this.grid[x].push(new Square(x, y));
+				this.grid[x].push(new Square(x, y, this));
 			}
 		}
+
+		this.castling = {w: {k: true, q: true}, b: {k: true, q: true}}; //king side & queen side castling privileges for white & black. if queenside rook moves, then queenside castling privileges = false. if king moves, all casling = false
 	}
 	setStartingPosition(){
 		var wb = [{color: 'w', yCoor: function(y){return y}}, {color: 'b', yCoor: function(y, h){return h-y-1}}];
@@ -21,22 +23,23 @@ class Grid{
 			//---pawns---
 			//NOTE: Messing with starting pos for pawns might screw up the pawns being able to move 2 squares on their first move.
 			//		If you change the starting pos for the pawns, or the movement of the pawns, check getMoves() for pawns in pieces.js and clientGetMoves.js
-			for (var i = 0; i < 6; i++) {
-				this.grid[1+i][wb[c].yCoor(1, this.height)].piece = wb[c].color + 'p';
+			for (var i = 0; i < 3; i++) {
+				this.grid[i][wb[c].yCoor(1, this.height)].piece = wb[c].color + 'p';
+				this.grid[this.width-1-i][wb[c].yCoor(1, this.height)].piece = wb[c].color + 'p';
 			}
 			//---bishops---
-			this.grid[1][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'b';
-			this.grid[6][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'b';
+			this.grid[2][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'b';
+			this.grid[this.width-3][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'b';
 			//---rooks---
-			this.grid[2][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'r';
-			this.grid[5][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'r';
+			this.grid[0][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'r';
+			this.grid[this.width-1][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'r';
 			//---knights / guards---
-			this.grid[0][wb[c].yCoor(1, this.height)].piece = wb[c].color + 'n';
-			this.grid[7][wb[c].yCoor(1, this.height)].piece = wb[c].color + 'n';
-			//---queens / black widows---
+			this.grid[3][wb[c].yCoor(1, this.height)].piece = wb[c].color + 'n';
+			this.grid[this.width-4][wb[c].yCoor(1, this.height)].piece = wb[c].color + 'n';
+			//---queens / black widows / ghosts---
 			this.grid[3][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'q';
 			//---kings---
-			this.grid[4][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'k';
+			this.grid[this.width-4][wb[c].yCoor(0, this.height)].piece = wb[c].color + 'k';
 		}
 	}
 	//returns an array of all the squares in the board. each square is represented by a dictionary {state: 'cloudy/clear + (_X)?', piece: 'piece initials', ... optional additional info}
@@ -65,6 +68,9 @@ class Grid{
 					else if(color == 'all'){
 						boardData[x].push({state: 'clear', piece: this.grid[x][y].piece});
 					}
+					else if(color == 'spec'){
+						boardData[x].push({state: this.grid[x][y].getMergedVisibility(), piece: this.grid[x][y].piece});
+					}
 				}
 			}
 		return boardData;
@@ -77,7 +83,7 @@ class Grid{
 
 		var allMoves = this.forEach(function(square, grid){
 			if(square.piece.length == 2 && square.piece[0] == color){
-				var moves = piecesData[square.piece[1]].getMoves(square, grid);
+				var moves = piecesData[square.piece[1]].getMoves(square);
 				for (var i = 0; i < moves.length; i++){
 					moves[i] = [moves[i].x, moves[i].y];
 				}
@@ -129,7 +135,7 @@ class Grid{
 			return []; //there is no piece here, therefore it cannot move anywhere
 		}
 
-		var moves = piecesData[square.piece[1]].getMoves(square, this);;
+		var moves = piecesData[square.piece[1]].getMoves(square);;
 		var piecesList = [];
 		for (var key in piecesData){
 			piecesList.push(piecesData[key]);
@@ -138,6 +144,7 @@ class Grid{
 		var enemyColor = (square.piece[0] == 'w') ? 'b' : 'w';
 		for (var i = moves.length-1; i >= 0; i--) {
 			piecesData[square.piece[1]].move(gridCopy.grid[square.x][square.y], gridCopy.grid[moves[i].x][moves[i].y]);
+			gridCopy.recalibrate();
 			let inCheck = gridCopy.forEach(function(sq){
 				//loop through grid, find the square with your king, check if the king is being attacked. if it is, then this is an invalid move.
 				if(sq.piece == square.piece[0] + 'k'){
@@ -163,7 +170,7 @@ class Grid{
 		var results = [];
 		//concatinate each piece.getAttackers() into the results list
 		for (var i = 0; i < pieces.length; i++) {
-			results = results.concat(pieces[i].getAttackers(square, this, color));
+			results = results.concat(pieces[i].getAttackers(square, color));
 		}
 		//remove duplicates from results. shouldn't matter as there shouldn't be any duplicates anyways, but can't be too safe :)
 	    for(var i=0; i<results.length; ++i) {
@@ -191,13 +198,13 @@ class Grid{
 		//add back observersd
 		this.forEach(function(square, grid) {
 			if(square.piece !== ""){
-				var visibleSquares = piecesData[square.piece[1]].getVisibleSquares(square, grid);
+				var visibleSquares = piecesData[square.piece[1]].getVisibleSquares(square);
 				for (var i = 0; i < visibleSquares.length; i++) {
 					visibleSquares[i].getColorSpecificComponent(square.piece[0]).observers.push(square);
 				}
 			}
 		});
-		//recalibate visibility according to new observer data. all '_X' are removed in this step
+		//recalibate visibility according to new observer data. all ' X' are removed in this step
 		this.forEach(function(square) {
 			square.recalibrateVisibility();
 		});
@@ -209,9 +216,9 @@ class Grid{
 		this.forEach(function(square, grid) {
 			if(square.piece[1] == 'k'){
 				if(grid.getAttackers(square, piecesList, ((square.piece[0] == 'w') ? 'b' : 'w') ).length > 0){
-					square.getColorSpecificComponent(square.piece[0]).visibility += '_X';
+					square.getColorSpecificComponent(square.piece[0]).visibility += ' X';
 				}
-				/*var checks = piecesData['k'].getChecks(square, grid);
+				/*var checks = piecesData['k'].getChecks(square);
 				for (var i = 0; i < checks.length; ++i) {
 					checks[i].getColorSpecificComponent(square.piece[0]).visibility += '_X';
 				}*/
@@ -250,9 +257,10 @@ class Grid{
 }
 
 class Square{
-	constructor(x, y){
+	constructor(x, y, grid){
 		this.x = x;
 		this.y = y;
+		this.grid = grid;
 		this.piece = '';
 		this.white = {observers: [], ghostObservers: 0, visibility: 'clear'};
 		this.black = {observers: [], ghostObservers: 0, visibility: 'clear'};
@@ -268,6 +276,36 @@ class Square{
 		else if(color == 'b'){
 			return this.black;
 		}
+	}
+	//for spectators, so they can see the visibility of both players at once.
+	getMergedVisibility(){
+		var res = '';
+		var w = this.white.visibility;
+		var b = this.black.visibility;
+		//if white is clear
+		if(w.includes('clear')){
+			//if white and black are clear
+			if(b.includes('clear')){
+				res += 'clear';
+			}
+			//if white is clear and black is cloudy
+			else{
+				res += 'clear w';
+			}
+		}
+		//if white is cloudy and black is clear
+		else if(b.includes('clear')){
+			res += 'clear b';
+		}
+		//if both are cloudy
+		else{
+			res += 'cloudy';
+		}
+		//checks
+		if(w.includes(' X') || b.includes(' X')){
+			res += ' X';
+		}
+		return res;
 	}
 	resetObservers(){
 		this.white.observers = [];

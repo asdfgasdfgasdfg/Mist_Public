@@ -204,10 +204,10 @@ function createGamePage(data) {
 	var height = boardData[0].length; //it is assumed that the board is a rectangle
 	for (var y = height-1; y >= 0; y--) {
 	      for (var x = 0; x < width; x++) {
-	      		let absX = (data.color == 'w')
+	      		let absX = (data.color == 'w' || data.color == 'spec')
 	      			? x
 	      			: width-x-1;
-	      		let absY = (data.color == 'w')
+	      		let absY = (data.color == 'w' || data.color == 'spec')
 	      			? y
 	      			: height-y-1;
 	      		let squareData = boardData[absX][absY];
@@ -216,8 +216,8 @@ function createGamePage(data) {
 	            square.id = absX.toString()+absY.toString();
 	            //clear or cloudy
 	            square.className = (absX % 2 === absY % 2)
-				  ? ('square_black_' + squareData.state)
-				  : ('square_white_' + squareData.state);
+				  ? ('square black ' + squareData.state)
+				  : ('square white ' + squareData.state);
 				//piece
 				if(squareData.piece != ''){
 					addOrRemovePiece(square, squareData.piece);
@@ -324,15 +324,27 @@ function onclickSquare(squareEle, rightClick = false) {
     deselect();
   //TODO: play deselect sound?
   }
-  else if(getPieceFromSquare(squareEle)[0] == color){ //clicked on a new square with a friendly piece. they want to select the piece.
-    deselect();
-    select(squareEle, rightClick);
-    //TODO: play select sound
-  }
-  else{//clicked on nothing. just deselect.
-      deselect();
-      //TODO: play deselect sound?
-  }
+  else{
+	let piece = getPieceFromSquare(squareEle);
+
+  	if(piece != ''){ 
+  		//clicked on a new square with a friendly piece. they want to select the piece.
+    	if(piece[0] == color){
+    		deselect();
+	    	select(squareEle, rightClick);
+	    	//TODO: play select sound
+    	}
+    	//spectator clicks on a piece
+    	else if(color == 'spec'){
+    		deselect();
+	    	select(squareEle, rightClick);
+    	}
+  	}
+	else{//clicked on nothing. just deselect.
+	  deselect();
+	  //TODO: play deselect sound?
+	}
+	}
   //-----see "additional functionality"-----
   /*not currently in use
 	for (var i = 0; i < extraOnclickSquare.after.length; i++) {
@@ -366,10 +378,10 @@ function updateBoard(newBoardData) {
 		for (var y = 0; y < newBoardData[x].length; y++) {
 			square = document.getElementById(x.toString()+y.toString());
 			newSquare = newBoardData[x][y];
-			var indexOf_ = square.className.split('_', 2).join('_').length+1;
+			var indexOfSpace = square.className.split(' ', 2).join(' ').length+1;
 			//update state if needed (clear/cloudy + (_X)?)
-			if(square.className.substring(indexOf_, square.className.length) !== newSquare.state){
-				square.className = square.className.substring(0, indexOf_) + newSquare.state;
+			if(square.className.substring(indexOfSpace, square.className.length) !== newSquare.state){
+				square.className = square.className.substring(0, indexOfSpace) + newSquare.state;
 			}
 			//update piece if needed
 			if (getPieceFromSquare(square) !== newSquare.piece){
@@ -398,7 +410,7 @@ function deselect() {
         dottedSquares[i].parentNode.removeChild(dottedSquares[i]);
     }
     //remove selected square highlight. while loop should be redundant as there should only be one selected square, but cant be too safe.
-    var highlight = document.getElementsByClassName('square_selected');
+    var highlight = document.getElementsByClassName('square selected');
     while(highlight.length > 0){
         highlight[0].parentNode.removeChild(highlight[0]);
     }
@@ -411,7 +423,7 @@ function select(squareEle, rightClick = false) {
 	selectedSquare = squareEle;
 	//highlight selected square
 	var highlight = document.createElement('div');
-	highlight.className = 'square_selected';
+	highlight.className = 'square selected';
 	squareEle.appendChild(highlight);
 	//draw legal move dots, or in the case of right click, draw visible square dots
 	var tempLegalMoves;

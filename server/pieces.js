@@ -1,5 +1,3 @@
-//TODO: bn captured diagonally forward, wtf?
-
 var piecesData = {};
 function initPieces() {
 	new Pawn();
@@ -80,8 +78,9 @@ class Pawn extends Piece{
 	}
 
 	//returns list of Squares that are legal moves for a pawn at 'square'. checks if piece at 'square' is a black or white pawn and returns accordingly. assumes piece at 'square' is a pawn.
-	getMoves(square, grid){
+	getMoves(square){
 	    var results = [];
+	    var grid = square.grid;
 
 	    //color, enemy color, and forward (forward direction is different for black and white pawns)
 		var team = {color: 'w', enemy: 'b', forward: 1};
@@ -93,7 +92,7 @@ class Pawn extends Piece{
 	    if(grid.squareExists(square.x, square.y+team.forward)){
 			results.push(grid.grid[square.x][square.y+team.forward]);
 			//move forward twice if pawn is in its starting square and there's nothing in its way
-			const isInStartingPos = ((square.y == 1 && team.color == 'w') || (square.y == grid.height-2 && team.color == 'b')) && square.x > 0 && square.x < grid.width - 1;
+			const isInStartingPos = ((square.y == 1 && team.color == 'w') || (square.y == grid.height-2 && team.color == 'b')) && (square.x > grid.width-4 || square.x < 3);
 			if(grid.squareExists(square.x, square.y+2*team.forward)){
 				if(grid.grid[square.x][square.y+team.forward].piece == '' && isInStartingPos){
 					results.push(grid.grid[square.x][square.y+2*team.forward]);
@@ -115,7 +114,7 @@ class Pawn extends Piece{
 	    return results;
 	}
 
-	move(from, to, height){
+	move(from, to){
 	    if(from.piece == '' || from === undefined || to === undefined){
 			return; //trying to move a nonexistent piece or squares are undefined
 		}
@@ -153,9 +152,9 @@ class Pawn extends Piece{
 	    }
 	}
 
-	getVisibleSquares(square, grid){
+	getVisibleSquares(square){
 	    var results = [square]; //it's own square is always visible
-	    
+	    var grid = square.grid;
 	    var color = square.piece[0];
 	    var forward = (color == 'w')
 	    	? 1
@@ -176,7 +175,8 @@ class Pawn extends Piece{
 	    return results;
 	}
 	//gets all 'color' pawns attacking or guarding this square. 
-	getAttackers(square, grid, color){
+	getAttackers(square, color){
+		var grid = square.grid;
 		var results = [];
 		var forward = (color == 'w') ? 1 : -1;
 		if(grid.squareExists(square.x-1, square.y-forward)){
@@ -191,7 +191,8 @@ class Pawn extends Piece{
 	    }
 	    return results;
 	}
-	needsToPromote(square, grid){
+	needsToPromote(square){
+		var grid = square.grid;
 		if(square.piece.length != 2 || square.piece[1] != 'p'){
 			return; //square is not a pawn
 		}
@@ -213,7 +214,8 @@ class Bishop extends Piece{
 		super('b');
 	}
 
-	getMoves(square, grid){
+	getMoves(square){
+		var grid = square.grid;
 		var results = [];
 		const color = square.piece[0];
 
@@ -243,13 +245,14 @@ class Bishop extends Piece{
 		return results;
 	}
 
-	getVisibleSquares(square, grid){
-		var results = this.getMoves(square, grid);
+	getVisibleSquares(square){
+		var results = this.getMoves(square);
 		results.push(square);
 		return results;
 	}
 
-	getAttackers(square, grid, color){
+	getAttackers(square, color){
+		var grid = square.grid;
 		var results = [];
 		var enemyColor = (color == 'w') ? 'b' : 'w';
 
@@ -287,9 +290,25 @@ class Rook extends Piece{
 		super('r');
 	}
 
-	getMoves(square, grid){
+	move(from, to){
+		var grid = from.grid;
+		//on rook move, take away castling privileges
+		var castling = (from.piece[0] == 'w') ? grid.castling.w : grid.castling.b;
+		if((castling.q || castling.k) && (from.y == 0 || from.y == grid.height-1)){
+			if(from.x == 0){
+				castling.q = false;
+			}
+			else if(from.x == grid.width-1){
+				castling.k = false;
+			}
+		}
+		super.move(from, to);
+	}
+
+	getMoves(square){
 		var results = [];
 		const color = square.piece[0];
+		var grid = square.grid;
 
 		//[up, down, left, right]
 		const horizontalVectors = [{x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}];
@@ -317,13 +336,14 @@ class Rook extends Piece{
 		return results;
 	}
 
-	getVisibleSquares(square, grid){
-		var results = this.getMoves(square, grid);
+	getVisibleSquares(square){
+		var results = this.getMoves(square);
 		results.push(square);
 		return results;
 	}
 
-	getAttackers(square, grid, color){
+	getAttackers(square, color){
+		var grid = square.grid;
 		var results = [];
 		var enemyColor = (color == 'w') ? 'b' : 'w';
 
@@ -354,20 +374,52 @@ class Rook extends Piece{
 
 		return results;
 	}
+
+	onCapture(attackingSquare, capturedSquare){
+		//---remove castling privileges if rook got captured---
+		var grid = capturedSquare.grid;
+		//for white
+		if (capturedSquare.piece[0] == 'w') {
+			if(capturedSquare.y == 0){
+				//queen side
+				if(grid.castling.w.q && capturedSquare.x == 0){
+					grid.castling.w.q = false;
+				}
+				//king side
+				else if(grid.castling.w.k && capturedSquare.x == grid.width-1){
+					grid.castling.w.k = false;
+				}
+			}
+		}
+		//for black
+		else{
+			if(capturedSquare.y == grid.height-1){
+				//queen side
+				if(grid.castling.b.q && capturedSquare.x == 0){
+					grid.castling.b.q = false;
+				}
+				//king side
+				else if(grid.castling.b.k && capturedSquare.x == grid.width-1){
+					grid.castling.b.k = false;
+				}
+			}
+		}
+	}
 }
 
 class Knight extends Piece{
 	constructor(){
 		super('n');
 	}
-	getMoves(square, grid){
+	getMoves(square){
+		var grid = square.grid;
 		var results = [];
 		const enemyColor = (square.piece[0] == 'w') ? 'b' : 'w';
 		const forward = (enemyColor == 'b') ? 1 : -1;
 
 		//---regular moves---
-		//[up, bottom left, bottom right]
-		const moves = [{x: 0, y: forward}, {x: -1, y: -forward}, {x: 1, y: -forward}];
+		//[down, top left, top right]
+		const moves = [{x: 0, y: -forward}, {x: -1, y: forward}, {x: 1, y: forward}];
 		var tempX;
 		var tempY;
 		var tempSquare;
@@ -391,7 +443,8 @@ class Knight extends Piece{
 		return results;
 	}
 
-	getVisibleSquares(square, grid){
+	getVisibleSquares(square){
+		var grid = square.grid;
 		var results = [square];
 		//---jumps (any enemy piece on the same row and same color square)---
 		for (var i = (square.x%2); i < grid.width; i+=2) {
@@ -399,7 +452,7 @@ class Knight extends Piece{
 		}
 		const enemyColor = (square.piece[0] == 'w') ? 'b' : 'w';
 		const forward = (enemyColor == 'b') ? 1 : -1;		
-		const moves = [{x: 0, y: forward}, {x: -1, y: -forward}, {x: 1, y: -forward}];
+		const moves = [{x: 0, y: -forward}, {x: -1, y: forward}, {x: 1, y: forward}];
 		var tempX;
 		var tempY;
 		var tempSquare;
@@ -416,12 +469,13 @@ class Knight extends Piece{
 		return results;
 	}
 
-	getAttackers(square, grid, color){
+	getAttackers(square, color){
+		var grid = square.grid;
 		var results = [];
 		const forward = (color == 'w') ? 1 : -1;
 		//---regular moves---
-		//[up, bottom left, bottom right]
-		const moves = [{x: 0, y: forward}, {x: -1, y: -forward}, {x: 1, y: -forward}];
+		//[down, top left, top right]
+		const moves = [{x: 0, y: -forward}, {x: -1, y: forward}, {x: 1, y: forward}];
 		var tempX;
 		var tempY;
 		var tempSquare;
@@ -451,7 +505,8 @@ class Queen extends Piece{
 	constructor(){
 		super('q');
 	}
-	getMoves(square, grid){
+	getMoves(square){
+		var grid = square.grid;
 		var results = [];
 		const enemyColor = (square.piece[0] == 'w') ? 'b' : 'w';
 		const color = square.piece[0];
@@ -479,11 +534,11 @@ class Queen extends Piece{
 		}
 		return results;
 	}
-	getVisibleSquares(square, grid){
+	getVisibleSquares(square){
 		
-		//var results = this.getMoves(square, grid);
-		//results.push(square);
-		return [square];
+		var results = this.getMoves(square);
+		results.push(square);
+		return results;
 		/*
 		var results = [square];
 		const color = square.piece[0];
@@ -509,8 +564,9 @@ class Queen extends Piece{
 		}
 		return results;*/
 	}
-	getAttackers(square, grid, color){
-		//(Deprecated) Assumes the square in question is either empty or contains the king, since Queens can only capture kings or move into empty spots
+	getAttackers(square, color){
+		//(Deprecated) --> Assumes the square in question is either empty or contains the king, since Queens can only capture kings or move into empty spots
+		var grid = square.grid;
 		var results = [];
 		const enemyColor = (color == 'w') ? 'b' : 'w';
 		//if this square is invisible to 'color', no 'color' Queens will be able to see or attack it.
@@ -548,9 +604,32 @@ class King extends Piece{
 		super('k');
 	}
 
-	getMoves(square, grid){
+	move(from, to){
+		//on king move, take away castling privileges
+		var grid = from.grid;
+		var castling = (from.piece[0] == 'w') ? grid.castling.w : grid.castling.b;
+		if(castling.q){castling.q = false;}
+		if(castling.k){castling.k = false;}
+		//if you are castling, move the rook
+		if(Math.abs(to.x-from.x) == 2){
+			let grid = from.grid;
+			//queen side castle
+			if(to.x-from.x == -2){
+				piecesData['r'].move(grid.grid[0][from.y], grid.grid[from.x-1][from.y]);
+			}
+			//king side castle
+			else{
+				piecesData['r'].move(grid.grid[grid.width-1][from.y], grid.grid[from.x+1][from.y]);
+			}
+		}
+		//move the king
+		super.move(from, to);
+	}
+
+	getMoves(square){
+		var grid = square.grid;
 		var results = [];
-		const enemyColor = (square.piece[0] == 'w') ? 'b' : 'w';
+		const color = square.piece[0];
 
 		//[up, down, left, right, top right, top left, bottom right, bottom left]
 		const adjacentSquares = [{x: 0, y: 1}, {x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}, {x: -1, y: 1}, {x: 1, y: -1}, {x: -1, y: -1}];
@@ -564,23 +643,56 @@ class King extends Piece{
 			if(grid.squareExists(tempX, tempY)){
 				tempSquare = grid.grid[tempX][tempY];
 				//is legal move if it's not a friendly piece and it's unguarded/unchecked by the enemy
-				if(tempSquare.piece[0] != square.piece[0] && grid.getAttackers(tempSquare, grid, enemyColor).length == 0){
+				if(tempSquare.piece[0] != color){
 					results.push(tempSquare);
 				}
 			}
-			
 		}
-
+		//---castling---
+		var castling = (color == 'w') ? grid.castling.w : grid.castling.b;
+		var blocked = false;
+		//if have queen side castling privileges
+		if(square.x == 4){
+			if(castling.q){
+				//check if nothing between king and rook
+				for (var i = square.x-1; i > 0; i--) {
+					if(grid.grid[i][square.y].piece != ''){
+						blocked = true;
+						break;
+					}
+				}
+				//allow castling
+				if(!blocked){
+					results.push(grid.grid[square.x-2][square.y]);
+				}
+			}
+			blocked = false;
+			//if have king side castling privileges
+			if(castling.k){
+				//check if nothing between king and rook
+				for (var i = square.x+1; i < grid.width-2; i++) {
+					if(grid.grid[i][square.y].piece != ''){
+						blocked = true;
+						break;
+					}
+				}
+				//allow castling
+				if(!blocked){
+					results.push(grid.grid[square.x+2][square.y]);
+				}
+			}
+		}
 		return results;
 	}
 
-	getVisibleSquares(square, grid){
-		var results = this.getMoves(square, grid);
+	getVisibleSquares(square){
+		var results = this.getMoves(square);
 		results.push(square);
 		return results;
 	}
 
-	getAttackers(square, grid, color){
+	getAttackers(square, color){
+		var grid = square.grid;
 		var results = [];
 		const enemyColor = (color == 'w') ? 'b' : 'w';
 
@@ -610,7 +722,8 @@ class King extends Piece{
 		//console.log(attackingSquare.piece[0] + " wins");
 	}
 
-	getChecks(square, grid){
+	getChecks(square){
+		var grid = square.grid;
 		var results = [];
 		const enemyColor = (square.piece[0] == 'w') ? 'b' : 'w';
 
