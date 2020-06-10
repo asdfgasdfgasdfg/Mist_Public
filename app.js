@@ -232,8 +232,8 @@ io.sockets.on('connection', function(socket){
 			if(game.players['w'] != 'waiting' && game.players['b'] != 'waiting'){
 				//add spectator to room
 				game.spectators.push(socket.id);
-				socket.game = 'spec/' + data.code;
-				socket.emit('joinRoom', {board: game.grid.getBoardDataForColor('spec'), color: 'spec', turn: game.turn});
+				socket.game = 'spec/' + game.code;
+				socket.emit('joinRoom', {code: game.code, board: game.grid.getBoardDataForColor('spec'), color: 'spec', turn: game.turn});
 			}
 			else{
 				//add player to room

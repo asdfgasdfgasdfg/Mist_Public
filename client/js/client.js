@@ -62,7 +62,7 @@ socket.on('updateBoard', function(data){
 			//allow player to try again
 			legalMoves = data.moves;
 			noMoreMoves = false;
-			document.getElementById('turn').innerHTML = 'Your Turn';
+			document.getElementById('turn').innerHTML = 'Your Turn&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp';
 	}
 	else if(data.status == 'legal'){
 		noMoreMoves = true;
@@ -83,7 +83,7 @@ socket.on('updateBoard', function(data){
 		}
 		//add the opponent's move to the moveHistory, even if you might not be able to see what they moved.
 		moveHistory.unshift(boardData);
-		document.getElementById('turn').innerHTML = 'Your Turn';
+		document.getElementById('turn').innerHTML = 'Your Turn&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp';
 	}
 	else if(data.status == 'promote'){
 		promotePawn(data.x, data.y);
@@ -96,17 +96,20 @@ socket.on('updateBoard', function(data){
 		if(data.status == 'win'){
 			//play win sound
 			sfx.win.play();
-			alert('You won!');
+			document.getElementById('turn').innerHTML = 'You win!&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp';
+			//alert('You won!');
 		}
 		else if(data.status == 'lose'){
 			//play lose sound
 			sfx.lose.play();
-			alert('You lost!');
+			document.getElementById('turn').innerHTML = 'You lost!&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp';
+			//alert('You lost!');
 		}
 		else if(data.status == 'tie'){
 			//play draw sound
 			sfx.draw.play();
-			alert('Draw');
+			document.getElementById('turn').innerHTML = 'You tied!&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp';
+			//alert('Draw');
 		}
 	}
 	
@@ -210,10 +213,25 @@ function createGamePage(data) {
 	//create board
 	var board = document.createElement('div');
 	board.id = 'board';
-	board.style.width = board.style.height = options.width.toString()+'px';
 	board.style.position = 'relative';
-	board.style.left = '20%';
 	board.style.boxShadow = '0px 20px 30px';
+	board.style.overflow = 'visible';
+	board.style.float = 'left';
+	if(window.innerWidth > window.innerHeight){
+		let size = window.innerHeight*0.8;
+		board.style.width = size.toString() + 'px';
+		board.style.height = size.toString() + 'px';
+		let margin = (window.innerWidth - size)/3;
+		board.style.left = margin.toString() + 'px';
+	}
+	else{
+		if(window.innerHeight >= window.innerWidth*1.125){ //TODO: is this not triggering?
+			board.style.width = board.style.height = window.innerWidth.toString() + 'px';
+		}
+		else{//or is 0.8x still too much?
+			board.style.width = board.style.height = (window.innerWidth*0.8).toString() + 'px';
+		}
+	}
 	//create squares
 	var width = boardData.length;
 	var height = boardData[0].length; //it is assumed that the board is a rectangle
@@ -249,39 +267,66 @@ function createGamePage(data) {
 			    board.appendChild(square);
 	      }
 	}
-	//add board to document
-	document.body.appendChild(board);
-	//add the info bar | for now its just a text box that tells you whos turn it is
+	
+	//add the info bar | for now its just a text box that tells you whos turn it is, and a textbox with the game code
+	//the '&nbsp' is whitespace, so that all the text is 15 characters long, or else the positioning wont work correctly
 	var p = document.createElement('p');
 	p.id = 'turn';
-	document.body.appendChild(p);
+	if(color == 'spec'){
+		p.innerHTML = 'Spectating';
+	}
+	else if(noMoreMoves){
+		p.innerHTML = "Opponent's Turn";
+	}
+	else{
+		p.innerHTML = "Your Turn&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp";
+	}
+	p.style.position = 'relative';
+	p.style.float = 'left';
+	board.appendChild(p);
+	p = document.createElement('p');
+	p.id = 'gameCode';
+	p.innerHTML = '&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp' + data.code;
+	p.style.position = 'relative;';
+	p.style.float = 'right';
+	board.appendChild(p);
 	//play start game sound
 	sfx['startGame'].play();
 	//add board to moveHistory
 	moveHistory = [boardData];
 	//create backward & forward btns to look through move history
 	//back btn
-	var btn = document.createElement('a');
-	btn.className = 'roundBtn';
-	btn.innerHTML = '&#8249;'
-	btn.onclick = function(){
+	var bBtn = document.createElement('a');
+	bBtn.className = 'roundBtn';
+	bBtn.innerHTML = '&#8249;'
+	bBtn.onclick = function(){
 		if(moveIndex < moveHistory.length-1){
 			++moveIndex;
 			updateBoard(moveHistory[moveIndex]);
 		}
 	}
-	document.body.appendChild(btn);
 	//forward btn
-	btn = document.createElement('a');
-	btn.className = 'roundBtn';
-	btn.innerHTML = '&#8250;'
-	btn.onclick = function(){
+	var fBtn = document.createElement('a');
+	fBtn.className = 'roundBtn';
+	fBtn.innerHTML = '&#8250;'
+	fBtn.onclick = function(){
 		if(moveIndex > 0){
 			--moveIndex;
 			updateBoard(moveHistory[moveIndex]);
 		}
 	}
-	document.body.appendChild(btn);
+	bBtn.style.width = fBtn.style.width = (board.style.width * 0.1).toString() + 'px';
+	var navBtns = document.createElement('div');
+	//navBtns.id = 'navBtns';
+	navBtns.style.textAlign = 'center';
+	navBtns.appendChild(bBtn);
+	navBtns.appendChild(fBtn);
+	board.appendChild(navBtns);
+	//bBtn.style.float = fBtn.style.float = 'left';
+	//0.1875
+
+	//add board to document
+	document.body.appendChild(board);
 	/*not currently in use
 	//-----see "additional functionality"-----
 	for (var i = 0; i < extraCreateGamePage.after.length; i++) {
