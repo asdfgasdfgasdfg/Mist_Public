@@ -226,7 +226,7 @@ function createGamePage(data) {
 	}
 	else{
 		if(window.innerHeight >= window.innerWidth*1.125){ //TODO: is this not triggering?
-			board.style.width = board.style.height = window.innerWidth.toString() + 'px';
+			board.style.width = board.style.height = (window.innerWidth*0.97).toString() + 'px';
 		}
 		else{//or is 0.8x still too much?
 			board.style.width = board.style.height = (window.innerWidth*0.8).toString() + 'px';
