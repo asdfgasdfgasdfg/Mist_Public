@@ -1,8 +1,12 @@
 # Mist_Public
-Chess variant w/ fog of war and slightly different piece movements.\n
+Chess variant w/ fog of war and slightly different piece movements.
+
 [https://mistchess.herokuapp.com/](url)
+
 You can create a room then join using the code on another tab or device. 
+
 You can spectate a game by joining a room that already has 2 players.
+
 
 Rules are the same as chess, except:
 - The board is 8x9, and the top 3 rows of your opponent's pieces are hidden behind a fog.
